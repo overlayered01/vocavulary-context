@@ -60,15 +60,24 @@ class NotificationService {
   }
 
   /// 매일 지정 시각에 반복되는 복습 알림을 예약한다.
+  ///
+  /// [quiet]가 주어지고 알림 시각이 방해금지 구간 안이면
+  /// 구간이 끝나는 시각으로 미뤄서 예약한다.
   Future<void> scheduleDailyReminder({
     required int hour,
     required int minute,
+    ({int startMinutes, int endMinutes})? quiet,
     String title = '복습 시간이에요',
     String body = '오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!',
   }) async {
     if (kIsWeb) return;
     await init();
     await cancelDailyReminder();
+
+    if (quiet != null && _inQuietWindow(hour * 60 + minute, quiet)) {
+      hour = quiet.endMinutes ~/ 60;
+      minute = quiet.endMinutes % 60;
+    }
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -99,6 +108,19 @@ class NotificationService {
   Future<void> cancelDailyReminder() async {
     if (kIsWeb) return;
     await _plugin.cancel(id: _dailyId);
+  }
+
+  /// [minutes](자정 기준 분)가 방해금지 구간 안인지. 자정을 넘는 구간도 지원.
+  static bool _inQuietWindow(
+    int minutes,
+    ({int startMinutes, int endMinutes}) quiet,
+  ) {
+    final (:startMinutes, :endMinutes) = quiet;
+    if (startMinutes == endMinutes) return false; // 길이 0 구간
+    if (startMinutes < endMinutes) {
+      return minutes >= startMinutes && minutes < endMinutes;
+    }
+    return minutes >= startMinutes || minutes < endMinutes;
   }
 
   tz.TZDateTime _nextInstanceOf(int hour, int minute) {

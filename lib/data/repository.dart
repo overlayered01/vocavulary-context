@@ -1,3 +1,4 @@
+import '../models/study_log.dart';
 import '../models/word.dart';
 import '../models/wordbook.dart';
 
@@ -18,6 +19,12 @@ abstract class VocabRepository {
 
   Future<Word> upsertWord(Word word);
   Future<void> deleteWord(String wordbookId, String wordId);
+
+  /// 학습 기록 추가 (복습 1문제당 1건).
+  Future<void> addStudyLog(StudyLog log);
+
+  /// [since] 이후의 학습 기록 (일일 통계용).
+  Future<List<StudyLog>> getStudyLogsSince(DateTime since);
 
   /// 클라우드 동기화 모드 여부 (Firebase 로그인 상태).
   bool get isCloud;

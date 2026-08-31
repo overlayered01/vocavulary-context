@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../models/study_log.dart';
 import '../models/word.dart';
 import '../models/wordbook.dart';
 import 'repository.dart';
@@ -12,6 +13,10 @@ class LocalRepository implements VocabRepository {
   static const _kWordbooks = 'wordbooks';
   static const _kWordsPrefix = 'words_';
   static const _kSeeded = 'seeded_v1';
+  static const _kStudyLogs = 'study_logs';
+
+  /// 로컬에 보관할 학습 기록 상한 (오래된 것부터 버림).
+  static const _maxStudyLogs = 5000;
 
   final _uuid = const Uuid();
   late SharedPreferences _prefs;
@@ -155,5 +160,43 @@ class LocalRepository implements VocabRepository {
     final words = await getWords(wordbookId)
       ..removeWhere((e) => e.id == wordId);
     await _saveWords(wordbookId, words);
+  }
+
+  // ---- study logs ----
+  List<StudyLog> _loadStudyLogs() {
+    final raw = _prefs.getString(_kStudyLogs);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => StudyLog.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  @override
+  Future<void> addStudyLog(StudyLog log) async {
+    final logs = _loadStudyLogs()
+      ..add(
+        log.id.isEmpty
+            ? StudyLog(
+                id: _uuid.v4(),
+                wordId: log.wordId,
+                correct: log.correct,
+                studiedAt: log.studiedAt,
+              )
+            : log,
+      );
+    final trimmed = logs.length > _maxStudyLogs
+        ? logs.sublist(logs.length - _maxStudyLogs)
+        : logs;
+    await _prefs.setString(
+      _kStudyLogs,
+      jsonEncode(trimmed.map((e) => e.toMap()).toList()),
+    );
+  }
+
+  @override
+  Future<List<StudyLog>> getStudyLogsSince(DateTime since) async {
+    return _loadStudyLogs()
+        .where((log) => !log.studiedAt.isBefore(since))
+        .toList();
   }
 }

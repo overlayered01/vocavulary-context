@@ -59,6 +59,7 @@ Future<void> main() async {
     await notifications.scheduleDailyReminder(
       hour: settings.reminderHour,
       minute: settings.reminderMinute,
+      quiet: settings.quietWindow,
     );
   }
   final launchedFromNotification = await notifications
