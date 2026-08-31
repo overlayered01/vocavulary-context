@@ -1,14 +1,27 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/srs.dart';
+import '../models/study_log.dart';
 import '../models/word.dart';
 import '../providers.dart';
 import '../theme.dart';
 
-/// 예문 보고 단어 맞추기 (직접 입력) — MVP 핵심 복습 모드.
+/// 복습 방식.
+enum ReviewMode {
+  /// 예문 보고 단어 직접 입력 (MVP 기본).
+  input,
+
+  /// 예문 빈칸 채우기 — 4개 보기 중 고르는 객관식.
+  choice,
+}
+
+/// 예문 중심 복습 화면. [mode]에 따라 직접 입력 또는 객관식으로 출제한다.
 class ReviewScreen extends ConsumerStatefulWidget {
-  const ReviewScreen({super.key});
+  final ReviewMode mode;
+  const ReviewScreen({super.key, this.mode = ReviewMode.input});
 
   @override
   ConsumerState<ReviewScreen> createState() => _ReviewScreenState();
@@ -16,6 +29,9 @@ class ReviewScreen extends ConsumerStatefulWidget {
 
 class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   List<Word> _session = [];
+
+  /// 객관식 모드: 문제별 보기 목록 (정답 포함, 섞인 순서 고정).
+  List<List<String>> _choices = [];
   int _index = 0;
   int _correct = 0;
   bool _loading = true;
@@ -41,8 +57,32 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
     setState(() {
       _session = session;
+      if (widget.mode == ReviewMode.choice) {
+        _choices = _buildChoices(session, all);
+      }
       _loading = false;
     });
+  }
+
+  /// 문제별로 정답 + 다른 단어에서 뽑은 오답 최대 3개를 섞어 보기를 만든다.
+  List<List<String>> _buildChoices(List<Word> session, List<Word> all) {
+    final rng = Random();
+    final seen = <String>{};
+    final pool = <String>[
+      for (final w in all)
+        if (seen.add(w.term.toLowerCase())) w.term,
+    ];
+    return [
+      for (final w in session)
+        ([
+          w.term,
+          ...(pool
+                  .where((t) => t.toLowerCase() != w.term.toLowerCase())
+                  .toList()
+                ..shuffle(rng))
+              .take(3),
+        ]..shuffle(rng)),
+    ];
   }
 
   @override
@@ -80,6 +120,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ? Srs.applyCorrect(_current, now)
         : Srs.applyWrong(_current, now);
     await repo.upsertWord(updated);
+    await repo.addStudyLog(
+      StudyLog(id: '', wordId: _current.id, correct: ok, studiedAt: now),
+    );
     // 매 문제마다 갱신해 두면 중간에 나가도 홈 통계가 어긋나지 않는다.
     invalidateData(ref);
 
@@ -143,7 +186,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('예문 복습'),
+        title: Text(widget.mode == ReviewMode.choice ? '빈칸 채우기' : '예문 복습'),
         actions: [
           Center(
             child: Padding(
@@ -172,9 +215,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '예문과 뜻을 보고 단어를 입력하세요',
-                  style: TextStyle(color: AppColors.sub, fontSize: 13),
+                Text(
+                  widget.mode == ReviewMode.choice
+                      ? '예문과 뜻을 보고 알맞은 단어를 고르세요'
+                      : '예문과 뜻을 보고 단어를 입력하세요',
+                  style: const TextStyle(color: AppColors.sub, fontSize: 13),
                 ),
                 InkWell(
                   onTap: () => tts.speak(
@@ -210,7 +255,28 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            if (!_revealed) ...[
+            if (!_revealed && widget.mode == ReviewMode.choice) ...[
+              for (final option in _choices[_index])
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _reveal(Srs.checkAnswer(option, w.term)),
+                      child: Text(option, style: const TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                ),
+              Center(
+                child: TextButton(
+                  onPressed: _giveUp,
+                  child: const Text(
+                    '잘 모르겠어요',
+                    style: TextStyle(color: AppColors.sub),
+                  ),
+                ),
+              ),
+            ] else if (!_revealed) ...[
               TextField(
                 controller: _input,
                 autofocus: true,

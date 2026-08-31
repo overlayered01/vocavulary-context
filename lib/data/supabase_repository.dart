@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/study_log.dart';
 import '../models/word.dart';
 import '../models/wordbook.dart';
 import 'repository.dart';
@@ -11,6 +12,7 @@ import 'repository.dart';
 ///   wordbooks(id text pk, owner_id uuid, data jsonb, updated_at timestamptz)
 ///   words(id text pk, owner_id uuid, wordbook_id text,
 ///         data jsonb, created_at timestamptz, updated_at timestamptz)
+///   study_logs(id text pk, owner_id uuid, data jsonb, studied_at timestamptz)
 /// RLS: owner_id = auth.uid() 인 행만 읽기/쓰기 허용 (SUPABASE_설정가이드.md 참고).
 class SupabaseRepository implements VocabRepository {
   final SupabaseClient _db = Supabase.instance.client;
@@ -131,5 +133,35 @@ class SupabaseRepository implements VocabRepository {
   @override
   Future<void> deleteWord(String wordbookId, String wordId) async {
     await _db.from('words').delete().eq('id', wordId);
+  }
+
+  @override
+  Future<void> addStudyLog(StudyLog log) async {
+    final l = log.id.isEmpty
+        ? StudyLog(
+            id: _uuid.v4(),
+            wordId: log.wordId,
+            correct: log.correct,
+            studiedAt: log.studiedAt,
+          )
+        : log;
+    await _db.from('study_logs').insert({
+      'id': l.id,
+      'owner_id': _uid,
+      'data': l.toMap(),
+      'studied_at': l.studiedAt.toIso8601String(),
+    });
+  }
+
+  @override
+  Future<List<StudyLog>> getStudyLogsSince(DateTime since) async {
+    final rows = await _db
+        .from('study_logs')
+        .select('data')
+        .gte('studied_at', since.toIso8601String())
+        .order('studied_at', ascending: true);
+    return rows
+        .map((r) => StudyLog.fromMap(Map<String, dynamic>.from(r['data'])))
+        .toList();
   }
 }

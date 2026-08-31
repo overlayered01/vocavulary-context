@@ -69,6 +69,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               .where((w) => w.status == LearnStatus.completed)
               .length;
           final accuracy = _accuracy(words);
+          final todayCount =
+              ref.watch(todayStudyLogsProvider).asData?.value.length ?? 0;
           final previewGroups = _previewGroups(words, books);
           final selectedGroup = previewGroups.contains(_selectedPreviewGroup)
               ? _selectedPreviewGroup
@@ -172,6 +174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 22),
                   child: Row(
                     children: [
+                      _Stat(n: '$todayCount', label: '오늘 학습'),
                       _Stat(n: '${words.length}', label: '전체 단어'),
                       _Stat(n: '$completed', label: '완료'),
                       _Stat(n: '$accuracy%', label: '정답률'),
@@ -186,6 +189,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 icon: Icons.edit_note,
                 label: '예문 보고 단어 맞추기',
                 onTap: () => _startReview(context),
+              ),
+              _QuickItem(
+                icon: Icons.checklist,
+                label: '예문 빈칸 채우기 (객관식)',
+                onTap: () => _startReview(context, mode: ReviewMode.choice),
               ),
               _QuickItem(
                 icon: Icons.menu_book,
@@ -269,10 +277,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _startReview(BuildContext context) {
+  void _startReview(
+    BuildContext context, {
+    ReviewMode mode = ReviewMode.input,
+  }) {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const ReviewScreen()));
+    ).push(MaterialPageRoute(builder: (_) => ReviewScreen(mode: mode)));
   }
 }
 

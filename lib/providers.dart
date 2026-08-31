@@ -6,6 +6,7 @@ import 'data/local_repository.dart';
 import 'data/repository.dart';
 import 'data/supabase_repository.dart';
 import 'models/app_settings.dart';
+import 'models/study_log.dart';
 import 'models/word.dart';
 import 'models/wordbook.dart';
 import 'services/auth_service.dart';
@@ -75,6 +76,21 @@ class SettingsNotifier extends Notifier<AppSettings> {
     await _persist();
   }
 
+  Future<void> setQuietEnabled(bool v) async {
+    state = state.copyWith(quietEnabled: v);
+    await _persist();
+  }
+
+  Future<void> setQuietStart(int hour, int minute) async {
+    state = state.copyWith(quietStartHour: hour, quietStartMinute: minute);
+    await _persist();
+  }
+
+  Future<void> setQuietEnd(int hour, int minute) async {
+    state = state.copyWith(quietEndHour: hour, quietEndMinute: minute);
+    await _persist();
+  }
+
   Future<void> setTtsLocale(String locale) async {
     state = state.copyWith(ttsLocale: locale);
     await _persist();
@@ -115,8 +131,18 @@ final allWordsProvider = FutureProvider.autoDispose<List<Word>>((ref) {
   return ref.watch(repositoryProvider).getAllWords();
 });
 
+/// 오늘(자정 이후) 학습 기록. 홈의 '오늘 학습' 통계에 사용.
+final todayStudyLogsProvider = FutureProvider.autoDispose<List<StudyLog>>((
+  ref,
+) {
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+  return ref.watch(repositoryProvider).getStudyLogsSince(startOfDay);
+});
+
 /// 데이터 변경 후 화면 갱신용 헬퍼.
 void invalidateData(WidgetRef ref) {
   ref.invalidate(wordbooksProvider);
   ref.invalidate(allWordsProvider);
+  ref.invalidate(todayStudyLogsProvider);
 }

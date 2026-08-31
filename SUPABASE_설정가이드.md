@@ -65,15 +65,29 @@ create table public.words (
 
 create index words_wordbook_idx on public.words (wordbook_id);
 
+-- 학습 기록 (복습 1문제당 1건, 일일 통계용)
+create table public.study_logs (
+  id text primary key,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  data jsonb not null,
+  studied_at timestamptz not null default now()
+);
+
+create index study_logs_studied_idx on public.study_logs (owner_id, studied_at);
+
 -- RLS 활성화
 alter table public.wordbooks enable row level security;
 alter table public.words enable row level security;
+alter table public.study_logs enable row level security;
 
 -- 본인 소유 행만 접근
 create policy "own wordbooks" on public.wordbooks
   for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
 
 create policy "own words" on public.words
+  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+create policy "own study_logs" on public.study_logs
   for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
 ```
 
@@ -97,8 +111,10 @@ create policy "own words" on public.words
 ```
 wordbooks/{id}            ← data: Wordbook.toMap()
 words/{id}                ← data: Word.toMap(), wordbook_id 로 묶임
+study_logs/{id}           ← data: StudyLog.toMap(), studied_at 으로 조회
 ```
-앱의 `Wordbook.toMap()` / `Word.toMap()` 결과가 그대로 `data` jsonb 에 저장됩니다.
+앱의 `Wordbook.toMap()` / `Word.toMap()` / `StudyLog.toMap()` 결과가
+그대로 `data` jsonb 에 저장됩니다.
 
 ## 다음 단계 (로드맵 2~3단계)
 - 서버발 복습 리마인드 → Supabase Edge Functions + `pg_cron`

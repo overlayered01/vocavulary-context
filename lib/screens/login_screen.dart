@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/migration.dart';
+import '../data/supabase_repository.dart';
 import '../providers.dart';
 import '../theme.dart';
 
@@ -33,12 +35,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       await action();
+      if (mounted) await _maybeOfferMigration();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       setState(() => _error = _friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// 로그인 직후 로컬 단어장이 있으면 클라우드 이관을 제안한다.
+  /// (구글 OAuth처럼 세션이 아직 없으면 건너뛴다 — 설정 화면에서 수동 가능)
+  Future<void> _maybeOfferMigration() async {
+    if (ref.read(authServiceProvider).currentUser == null) return;
+    final local = ref.read(localRepositoryProvider);
+    final books = await local.getWordbooks();
+    if (books.isEmpty || !mounted) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('로컬 단어장 가져오기'),
+        content: Text(
+          '이 기기에서 만든 단어장 ${books.length}개를 클라우드로 복사할까요?\n'
+          '이미 클라우드에 있는 단어장은 건너뜁니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('나중에'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('가져오기'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final migrated = await migrateLocalToCloud(local, SupabaseRepository());
+    invalidateData(ref);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          migrated > 0 ? '단어장 $migrated개를 가져왔어요.' : '모든 단어장이 이미 클라우드에 있어요.',
+        ),
+      ),
+    );
   }
 
   /// 인증 예외를 사용자용 안내 문구로 바꾼다. (raw 예외 문자열 노출 방지)

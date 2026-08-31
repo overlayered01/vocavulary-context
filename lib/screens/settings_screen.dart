@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/migration.dart';
 import '../providers.dart';
 import '../theme.dart';
 import 'login_screen.dart';
@@ -75,10 +76,7 @@ class SettingsScreen extends ConsumerWidget {
                     await notifier.setReminderEnabled(v);
                     if (v) {
                       await notifications.requestPermissions();
-                      await notifications.scheduleDailyReminder(
-                        hour: settings.reminderHour,
-                        minute: settings.reminderMinute,
-                      );
+                      await _reschedule(ref);
                     } else {
                       await notifications.cancelDailyReminder();
                     }
@@ -88,7 +86,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   title: const Text('알림 시간'),
                   trailing: Text(
-                    '${settings.reminderHour.toString().padLeft(2, '0')}:${settings.reminderMinute.toString().padLeft(2, '0')}',
+                    _formatTime(settings.reminderHour, settings.reminderMinute),
                     style: const TextStyle(color: AppColors.sub),
                   ),
                   onTap: () async {
@@ -104,15 +102,77 @@ class SettingsScreen extends ConsumerWidget {
                         picked.hour,
                         picked.minute,
                       );
-                      if (settings.reminderEnabled) {
-                        await notifications.scheduleDailyReminder(
-                          hour: picked.hour,
-                          minute: picked.minute,
-                        );
-                      }
+                      await _reschedule(ref);
                     }
                   },
                 ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('방해금지 시간'),
+                  subtitle: const Text(
+                    '이 시간대와 겹치면 알림을 구간이 끝난 뒤로 미뤄요.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  value: settings.quietEnabled,
+                  activeThumbColor: AppColors.ink,
+                  onChanged: (v) async {
+                    await notifier.setQuietEnabled(v);
+                    await _reschedule(ref);
+                  },
+                ),
+                if (settings.quietEnabled) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('방해금지 시작'),
+                    trailing: Text(
+                      _formatTime(
+                        settings.quietStartHour,
+                        settings.quietStartMinute,
+                      ),
+                      style: const TextStyle(color: AppColors.sub),
+                    ),
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(
+                          hour: settings.quietStartHour,
+                          minute: settings.quietStartMinute,
+                        ),
+                      );
+                      if (picked != null) {
+                        await notifier.setQuietStart(
+                          picked.hour,
+                          picked.minute,
+                        );
+                        await _reschedule(ref);
+                      }
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('방해금지 끝'),
+                    trailing: Text(
+                      _formatTime(
+                        settings.quietEndHour,
+                        settings.quietEndMinute,
+                      ),
+                      style: const TextStyle(color: AppColors.sub),
+                    ),
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(
+                          hour: settings.quietEndHour,
+                          minute: settings.quietEndMinute,
+                        ),
+                      );
+                      if (picked != null) {
+                        await notifier.setQuietEnd(picked.hour, picked.minute);
+                        await _reschedule(ref);
+                      }
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -171,7 +231,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const Divider(height: 1),
-                if (user != null)
+                if (user != null) ...[
                   ListTile(
                     title: Text(user.email ?? user.id),
                     trailing: const Text(
@@ -179,8 +239,21 @@ class SettingsScreen extends ConsumerWidget {
                       style: TextStyle(color: AppColors.sub),
                     ),
                     onTap: () => ref.read(authServiceProvider).signOut(),
-                  )
-                else
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.cloud_upload_outlined,
+                      color: AppColors.ink,
+                    ),
+                    title: const Text('이 기기의 단어장 가져오기'),
+                    subtitle: const Text(
+                      '로컬 모드에서 만든 단어장을 클라우드로 복사해요.',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    onTap: () => _importLocal(context, ref),
+                  ),
+                ] else
                   ListTile(
                     leading: const Icon(Icons.login, color: AppColors.ink),
                     title: Text(
@@ -218,6 +291,71 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// 로컬 단어장을 클라우드로 이관한다. (로그인 상태에서만 노출되는 진입점)
+Future<void> _importLocal(BuildContext context, WidgetRef ref) async {
+  final repo = ref.read(repositoryProvider);
+  if (!repo.isCloud) return;
+  final local = ref.read(localRepositoryProvider);
+  final books = await local.getWordbooks();
+  if (!context.mounted) return;
+
+  if (books.isEmpty) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('가져올 로컬 단어장이 없어요.')));
+    return;
+  }
+
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('로컬 단어장 가져오기'),
+      content: Text(
+        '이 기기에서 만든 단어장 ${books.length}개를 클라우드로 복사할까요?\n'
+        '이미 클라우드에 있는 단어장은 건너뜁니다.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('취소'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('가져오기'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+
+  final migrated = await migrateLocalToCloud(local, repo);
+  invalidateData(ref);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        migrated > 0 ? '단어장 $migrated개를 가져왔어요.' : '모든 단어장이 이미 클라우드에 있어요.',
+      ),
+    ),
+  );
+}
+
+String _formatTime(int hour, int minute) =>
+    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+/// 최신 설정값으로 복습 알림을 다시 예약한다. (꺼져 있으면 아무것도 안 함)
+Future<void> _reschedule(WidgetRef ref) async {
+  final s = ref.read(settingsProvider);
+  if (!s.reminderEnabled) return;
+  await ref
+      .read(notificationServiceProvider)
+      .scheduleDailyReminder(
+        hour: s.reminderHour,
+        minute: s.reminderMinute,
+        quiet: s.quietWindow,
+      );
 }
 
 class _SectionLabel extends StatelessWidget {

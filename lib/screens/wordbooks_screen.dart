@@ -50,41 +50,82 @@ class WordbooksScreen extends ConsumerWidget {
   }
 
   Future<void> _createDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final title = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('새 단어장'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '단어장 이름'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('만들기'),
-          ),
-        ],
-      ),
+    final result = await showWordbookDialog(
+      context,
+      dialogTitle: '새 단어장',
+      confirmLabel: '만들기',
     );
-    if (title == null || title.isEmpty) return;
+    if (result == null || result.title.isEmpty) return;
     final repo = ref.read(repositoryProvider);
     await repo.createWordbook(
       Wordbook(
         id: '',
         ownerId: repo.isCloud ? 'cloud' : 'local',
-        title: title,
+        title: result.title,
+        tags: result.tags,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
     );
     invalidateData(ref);
   }
+}
+
+/// 단어장 이름·태그 입력 다이얼로그. 확인 시 (title, tags), 취소 시 null.
+Future<({String title, List<String> tags})?> showWordbookDialog(
+  BuildContext context, {
+  required String dialogTitle,
+  required String confirmLabel,
+  String initialTitle = '',
+  List<String> initialTags = const [],
+}) {
+  final titleCtrl = TextEditingController(text: initialTitle);
+  final tagsCtrl = TextEditingController(text: initialTags.join(', '));
+
+  ({String title, List<String> tags}) collect() {
+    final seen = <String>{};
+    final tags = [
+      for (final tag in tagsCtrl.text.split(','))
+        if (tag.trim().isNotEmpty && seen.add(tag.trim())) tag.trim(),
+    ];
+    return (title: titleCtrl.text.trim(), tags: tags);
+  }
+
+  return showDialog<({String title, List<String> tags})>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(dialogTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: titleCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '단어장 이름'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: tagsCtrl,
+            decoration: const InputDecoration(
+              labelText: '태그',
+              hintText: '토익, 일상회화 (쉼표로 구분)',
+            ),
+            onSubmitted: (_) => Navigator.pop(ctx, collect()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('취소'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, collect()),
+          child: Text(confirmLabel),
+        ),
+      ],
+    ),
+  );
 }
 
 class _WordbookCard extends ConsumerWidget {
@@ -148,7 +189,7 @@ class _WordbookCard extends ConsumerWidget {
                   if (v == 'delete') _delete(context, ref, count);
                 },
                 itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'rename', child: Text('이름 변경')),
+                  PopupMenuItem(value: 'rename', child: Text('이름·태그 편집')),
                   PopupMenuItem(value: 'delete', child: Text('단어장 삭제')),
                 ],
               ),
@@ -160,33 +201,17 @@ class _WordbookCard extends ConsumerWidget {
   }
 
   Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: book.title);
-    final title = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('단어장 이름 변경'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '단어장 이름'),
-          onSubmitted: (_) => Navigator.pop(ctx, controller.text.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('저장'),
-          ),
-        ],
-      ),
+    final result = await showWordbookDialog(
+      context,
+      dialogTitle: '단어장 편집',
+      confirmLabel: '저장',
+      initialTitle: book.title,
+      initialTags: book.tags,
     );
-    if (title == null || title.isEmpty || title == book.title) return;
+    if (result == null || result.title.isEmpty) return;
     await ref
         .read(repositoryProvider)
-        .updateWordbook(book.copyWith(title: title));
+        .updateWordbook(book.copyWith(title: result.title, tags: result.tags));
     invalidateData(ref);
   }
 
