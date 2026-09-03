@@ -6,6 +6,7 @@ import '../models/word.dart';
 import '../models/wordbook.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/speak_button.dart';
 import '../widgets/word_image.dart';
 import 'review_screen.dart';
 import 'word_detail_screen.dart';
@@ -131,17 +132,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 _WordPreviewCard(
                   word: preview,
-                  onSpeakWord: () => ref
-                      .read(ttsServiceProvider)
-                      .speak(preview.term, locale: settings.ttsLocale),
-                  onSpeakExample: preview.examples.isEmpty
-                      ? null
-                      : () => ref
-                            .read(ttsServiceProvider)
-                            .speak(
-                              preview.examples.first.sentence,
-                              locale: settings.ttsLocale,
-                            ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) {
@@ -479,15 +469,8 @@ class _DestinationSheet extends StatelessWidget {
 class _WordPreviewCard extends StatelessWidget {
   final Word word;
   final VoidCallback onTap;
-  final VoidCallback onSpeakWord;
-  final VoidCallback? onSpeakExample;
 
-  const _WordPreviewCard({
-    required this.word,
-    required this.onTap,
-    required this.onSpeakWord,
-    this.onSpeakExample,
-  });
+  const _WordPreviewCard({required this.word, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -547,10 +530,10 @@ class _WordPreviewCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      IconButton.filledTonal(
+                      SpeakButton(
+                        text: word.term,
+                        prominent: true,
                         tooltip: '단어 발음 듣기',
-                        icon: const Icon(Icons.volume_up_outlined, size: 21),
-                        onPressed: onSpeakWord,
                       ),
                     ],
                   ),
@@ -601,16 +584,7 @@ class _WordPreviewCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          IconButton(
-                            tooltip: '예문 듣기',
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(
-                              Icons.volume_up_outlined,
-                              size: 20,
-                              color: AppColors.ink,
-                            ),
-                            onPressed: onSpeakExample,
-                          ),
+                          SpeakButton(text: example.sentence, tooltip: '예문 듣기'),
                         ],
                       ),
                     ),

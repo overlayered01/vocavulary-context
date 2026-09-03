@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers.dart';
+import 'screens/explore_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/wordbooks_screen.dart';
@@ -29,7 +30,12 @@ class VocabularyApp extends StatelessWidget {
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
 
-  static const _pages = [HomeScreen(), WordbooksScreen(), SettingsScreen()];
+  static const _pages = [
+    HomeScreen(),
+    WordbooksScreen(),
+    ExploreScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,6 +59,11 @@ class HomeShell extends ConsumerWidget {
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
             label: '단어장',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.travel_explore_outlined),
+            selectedIcon: Icon(Icons.travel_explore),
+            label: '탐색',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

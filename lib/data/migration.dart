@@ -1,3 +1,5 @@
+import '../models/word.dart';
+import '../models/wordbook.dart';
 import 'local_repository.dart';
 import 'repository.dart';
 
@@ -23,4 +25,47 @@ Future<int> migrateLocalToCloud(
     migrated++;
   }
   return migrated;
+}
+
+/// 공유/공개 단어장을 내 단어장으로 복제한다.
+///
+/// 새 id로 만들어 원본과 분리하고(비공개로 시작), 단어의 학습 상태(SRS)는
+/// 초기화한다 — 복제한 사람 입장에선 처음 보는 단어이기 때문. 복제한 단어 수 반환.
+Future<int> importSharedWordbook(
+  VocabRepository repo,
+  Wordbook source,
+  List<Word> words,
+) async {
+  final now = DateTime.now();
+  final created = await repo.createWordbook(
+    Wordbook(
+      id: '',
+      ownerId: '',
+      title: source.title,
+      description: source.description,
+      tags: source.tags,
+      groups: source.groups,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+  for (final w in words) {
+    await repo.upsertWord(
+      Word(
+        id: '',
+        wordbookId: created.id,
+        group: w.group,
+        term: w.term,
+        meaning: w.meaning,
+        partOfSpeech: w.partOfSpeech,
+        phonetic: w.phonetic,
+        imageUrl: w.imageUrl,
+        examples: w.examples,
+        favorite: w.favorite,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+  }
+  return words.length;
 }

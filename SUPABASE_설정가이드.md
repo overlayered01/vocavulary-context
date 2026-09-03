@@ -89,7 +89,24 @@ create policy "own words" on public.words
 
 create policy "own study_logs" on public.study_logs
   for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+-- 공유·탐색 (3단계): shared/public 단어장과 그 단어는 다른 로그인 사용자도 읽기 가능
+-- (앱의 탐색 탭·공유 코드 가져오기에 필요. 쓰기는 여전히 소유자만.)
+create policy "read shared wordbooks" on public.wordbooks
+  for select using (data->>'visibility' in ('shared', 'public'));
+
+create policy "read shared words" on public.words
+  for select using (
+    exists (
+      select 1 from public.wordbooks b
+      where b.id = words.wordbook_id
+        and b.data->>'visibility' in ('shared', 'public')
+    )
+  );
 ```
+
+> 이미 테이블을 만들어 둔 프로젝트라면 `study_logs` 블록과
+> "공유·탐색" 정책 2개만 추가로 실행하면 됩니다.
 
 ## 4. 인증(Authentication) 설정
 대시보드 → **Authentication → Providers**:
@@ -116,7 +133,13 @@ study_logs/{id}           ← data: StudyLog.toMap(), studied_at 으로 조회
 앱의 `Wordbook.toMap()` / `Word.toMap()` / `StudyLog.toMap()` 결과가
 그대로 `data` jsonb 에 저장됩니다.
 
-## 다음 단계 (로드맵 2~3단계)
+## 공유·탐색 동작 방식
+- 단어장 메뉴 → **공유·공개 설정**에서 `비공개 / 코드 공유 / 공개`를 고릅니다.
+- **코드 공유**: 공유 코드(단어장 id)를 아는 사람만 탐색 탭에서 가져올 수 있음
+- **공개**: 탐색 탭의 공개 단어장 목록에 노출, 누구나 복제 가능
+- 가져오기는 **복제**(새 id, 학습 상태 초기화) 방식 — 원본과 분리되며 공동 편집은 아님
+
+## 다음 단계 (로드맵 3단계 이후)
 - 서버발 복습 리마인드 → Supabase Edge Functions + `pg_cron`
-- 단어장 타인 공유 → `visibility=shared/public` 행에 대한 공유 정책 추가
+- 단어장 공동 편집 → `members(역할: editor/viewer)` 테이블 + 초대 정책
 - 고품질 클라우드 TTS 옵션

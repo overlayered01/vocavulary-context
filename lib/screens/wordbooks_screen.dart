@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Visibility;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/wordbook.dart';
@@ -154,12 +155,28 @@ class _WordbookCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        book.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              book.title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (book.visibility != Visibility.private) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              book.visibility == Visibility.public
+                                  ? Icons.public
+                                  : Icons.link,
+                              size: 15,
+                              color: AppColors.sub,
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -186,10 +203,12 @@ class _WordbookCard extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, color: AppColors.sub),
                 onSelected: (v) {
                   if (v == 'rename') _rename(context, ref);
+                  if (v == 'share') _shareSettings(context, ref);
                   if (v == 'delete') _delete(context, ref, count);
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'rename', child: Text('이름·태그 편집')),
+                  PopupMenuItem(value: 'share', child: Text('공유·공개 설정')),
                   PopupMenuItem(value: 'delete', child: Text('단어장 삭제')),
                 ],
               ),
@@ -212,6 +231,103 @@ class _WordbookCard extends ConsumerWidget {
     await ref
         .read(repositoryProvider)
         .updateWordbook(book.copyWith(title: result.title, tags: result.tags));
+    invalidateData(ref);
+  }
+
+  /// 공개 범위(비공개/코드 공유/공개) 설정 + 공유 코드 복사. 클라우드 모드 전용.
+  Future<void> _shareSettings(BuildContext context, WidgetRef ref) async {
+    if (!ref.read(repositoryProvider).isCloud) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('공유·공개는 로그인 후 사용할 수 있어요.')));
+      return;
+    }
+
+    var selected = book.visibility;
+    final saved = await showDialog<Visibility>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('공유·공개 설정'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SegmentedButton<Visibility>(
+                expandedInsets: EdgeInsets.zero,
+                segments: const [
+                  ButtonSegment(value: Visibility.private, label: Text('비공개')),
+                  ButtonSegment(value: Visibility.shared, label: Text('코드 공유')),
+                  ButtonSegment(value: Visibility.public, label: Text('공개')),
+                ],
+                selected: {selected},
+                onSelectionChanged: (s) =>
+                    setDialogState(() => selected = s.first),
+              ),
+              const SizedBox(height: 12),
+              Text(switch (selected) {
+                Visibility.private => '나만 볼 수 있어요.',
+                Visibility.shared => '공유 코드를 아는 사람이 이 단어장을 복제할 수 있어요.',
+                Visibility.public => '탐색 탭의 공개 목록에 올라가고 누구나 복제할 수 있어요.',
+              }, style: const TextStyle(color: AppColors.sub, fontSize: 12)),
+              if (selected != Visibility.private) ...[
+                const SizedBox(height: 14),
+                const Text(
+                  '공유 코드',
+                  style: TextStyle(color: AppColors.sub, fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.chip,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          book.id,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '코드 복사',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.copy, size: 17),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: book.id));
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(content: Text('공유 코드를 복사했어요.')),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, selected),
+              child: const Text('저장'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved == null || saved == book.visibility) return;
+    await ref
+        .read(repositoryProvider)
+        .updateWordbook(book.copyWith(visibility: saved));
     invalidateData(ref);
   }
 
