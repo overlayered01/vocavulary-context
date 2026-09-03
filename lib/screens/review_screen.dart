@@ -8,6 +8,7 @@ import '../models/study_log.dart';
 import '../models/word.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/speak_button.dart';
 
 /// 복습 방식.
 enum ReviewMode {
@@ -147,9 +148,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-    final tts = ref.read(ttsServiceProvider);
-
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -221,12 +219,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       : '예문과 뜻을 보고 단어를 입력하세요',
                   style: const TextStyle(color: AppColors.sub, fontSize: 13),
                 ),
-                InkWell(
-                  onTap: () => tts.speak(
-                    w.examples.isNotEmpty ? w.examples.first.sentence : w.term,
-                    locale: settings.ttsLocale,
-                  ),
-                  child: const Icon(Icons.volume_up, color: AppColors.ink),
+                SpeakButton(
+                  text: w.examples.isNotEmpty
+                      ? w.examples.first.sentence
+                      : w.term,
+                  tooltip: '예문 듣기',
                 ),
               ],
             ),
@@ -320,7 +317,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 wasCorrect: _wasCorrect,
                 isMixed: isMixed,
                 onNext: _next,
-                onSpeak: () => tts.speak(w.term, locale: settings.ttsLocale),
               ),
           ],
         ),
@@ -334,13 +330,11 @@ class _FeedbackBlock extends StatelessWidget {
   final bool wasCorrect;
   final bool isMixed;
   final VoidCallback onNext;
-  final VoidCallback onSpeak;
   const _FeedbackBlock({
     required this.word,
     required this.wasCorrect,
     required this.isMixed,
     required this.onNext,
-    required this.onSpeak,
   });
 
   @override
@@ -388,14 +382,7 @@ class _FeedbackBlock extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        InkWell(
-                          onTap: onSpeak,
-                          child: const Icon(
-                            Icons.volume_up,
-                            size: 20,
-                            color: AppColors.ink,
-                          ),
-                        ),
+                        SpeakButton(text: word.term),
                       ],
                     ),
                   ],

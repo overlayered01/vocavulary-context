@@ -7,6 +7,7 @@ import '../models/word.dart';
 import '../models/wordbook.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/speak_button.dart';
 import 'word_detail_screen.dart';
 import 'word_edit_screen.dart';
 
@@ -665,17 +666,7 @@ class _WordRowState extends ConsumerState<_WordRow> {
                 ),
                 onPressed: widget.onEdit,
               ),
-              IconButton(
-                tooltip: '발음 듣기',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.volume_up, color: AppColors.ink),
-                onPressed: () => ref
-                    .read(ttsServiceProvider)
-                    .speak(
-                      w.term,
-                      locale: ref.read(settingsProvider).ttsLocale,
-                    ),
-              ),
+              SpeakButton(text: w.term),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: AppColors.sub),
                 onSelected: (v) {

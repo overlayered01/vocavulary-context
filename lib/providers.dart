@@ -103,7 +103,7 @@ final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(
 
 // ---- 네비게이션 ----
 
-/// 하단 탭 인덱스 (0=홈, 1=단어장, 2=설정). 홈의 바로가기 등에서 탭 전환에 사용.
+/// 하단 탭 인덱스 (0=홈, 1=단어장, 2=탐색, 3=설정). 홈의 바로가기 등에서 탭 전환에 사용.
 class HomeTabNotifier extends Notifier<int> {
   @override
   int build() => 0;
@@ -129,6 +129,15 @@ final wordsProvider = FutureProvider.autoDispose.family<List<Word>, String>((
 
 final allWordsProvider = FutureProvider.autoDispose<List<Word>>((ref) {
   return ref.watch(repositoryProvider).getAllWords();
+});
+
+/// 다른 사용자의 공개 단어장 목록 (탐색 탭). 클라우드 로그인 상태에서만 조회.
+final publicWordbooksProvider = FutureProvider.autoDispose<List<Wordbook>>((
+  ref,
+) {
+  final repo = ref.watch(repositoryProvider);
+  if (repo is! SupabaseRepository) return Future.value(const <Wordbook>[]);
+  return repo.getPublicWordbooks();
 });
 
 /// 오늘(자정 이후) 학습 기록. 홈의 '오늘 학습' 통계에 사용.

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/word.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/speak_button.dart';
 import '../widgets/word_image.dart';
 import 'word_edit_screen.dart';
 
@@ -129,11 +130,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                   ],
                 ),
               ),
-              IconButton.filledTonal(
-                icon: const Icon(Icons.volume_up),
-                onPressed: () =>
-                    tts.speak(word.term, locale: settings.ttsLocale),
-              ),
+              SpeakButton(text: word.term, prominent: true),
             ],
           ),
           const SizedBox(height: 8),
@@ -215,15 +212,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                             style: const TextStyle(fontSize: 14),
                           ),
                         ),
-                        InkWell(
-                          onTap: () =>
-                              tts.speak(e.sentence, locale: settings.ttsLocale),
-                          child: const Icon(
-                            Icons.volume_up,
-                            size: 20,
-                            color: AppColors.ink,
-                          ),
-                        ),
+                        SpeakButton(text: e.sentence, tooltip: '예문 듣기'),
                       ],
                     ),
                     if (e.translation.isNotEmpty) ...[
