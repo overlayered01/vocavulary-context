@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/review_examples.dart';
 import '../data/srs.dart';
 import '../models/study_log.dart';
 import '../models/word.dart';
@@ -33,6 +34,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   /// 객관식 모드: 문제별 보기 목록 (정답 포함, 섞인 순서 고정).
   List<List<String>> _choices = [];
+
+  /// 각 문제에서 현재 보여 주는 예문 인덱스.
+  List<int> _exampleIndexes = [];
   int _index = 0;
   int _correct = 0;
   bool _loading = true;
@@ -58,6 +62,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
     setState(() {
       _session = session;
+      _exampleIndexes = [
+        for (final word in session) ReviewExamples.initialIndex(word),
+      ];
       if (widget.mode == ReviewMode.choice) {
         _choices = _buildChoices(session, all);
       }
@@ -94,18 +101,35 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   Word get _current => _session[_index];
 
+  Example? get _currentExample {
+    final exampleIndex = _exampleIndexes[_index];
+    if (exampleIndex < 0) return null;
+    return _current.examples[exampleIndex];
+  }
+
   /// 예문에서 정답 단어를 빈칸으로 가린 문자열.
   ///
   /// 단어 경계에서 시작하는 변형형까지 가린다 (run → running, runs).
   /// 반대로 다른 단어 속 부분 일치는 가리지 않는다 (art ↛ part).
-  String _clozeSentence(Word w) {
-    if (w.examples.isEmpty) return '(예문이 없습니다 — 뜻을 보고 단어를 입력하세요)';
-    final s = w.examples.first.sentence;
+  String _clozeSentence(Word w, Example? example) {
+    if (example == null) return '(예문이 없습니다 — 뜻을 보고 단어를 입력하세요)';
+    final s = example.sentence;
     final pattern = RegExp(
       '\\b${RegExp.escape(w.term)}\\w*',
       caseSensitive: false,
     );
     return s.replaceAll(pattern, '______');
+  }
+
+  void _showNextExample() {
+    final word = _current;
+    if (word.examples.length < 2) return;
+    setState(() {
+      _exampleIndexes[_index] = ReviewExamples.nextIndex(
+        _exampleIndexes[_index],
+        word.examples.length,
+      );
+    });
   }
 
   /// 입력을 채점해 공개한다.
@@ -175,6 +199,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     }
 
     final w = _current;
+    final example = _currentExample;
     final progress = (_index) / _session.length;
     final isMixed = w.status == LearnStatus.completed;
 
@@ -211,22 +236,33 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  widget.mode == ReviewMode.choice
-                      ? '예문과 뜻을 보고 알맞은 단어를 고르세요'
-                      : '예문과 뜻을 보고 단어를 입력하세요',
-                  style: const TextStyle(color: AppColors.sub, fontSize: 13),
+                Expanded(
+                  child: Text(
+                    widget.mode == ReviewMode.choice
+                        ? '예문과 뜻을 보고 알맞은 단어를 고르세요'
+                        : '예문과 뜻을 보고 단어를 입력하세요',
+                    style: const TextStyle(color: AppColors.sub, fontSize: 13),
+                  ),
                 ),
                 SpeakButton(
-                  text: w.examples.isNotEmpty
-                      ? w.examples.first.sentence
-                      : w.term,
+                  text: example?.sentence ?? w.term,
+                  isSentence: example != null,
                   tooltip: '예문 듣기',
                 ),
               ],
             ),
+            if (w.examples.length > 1)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _showNextExample,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(
+                    '다른 예문  ${_exampleIndexes[_index] + 1}/${w.examples.length}',
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             // 빈칸 예문 카드
             Container(
@@ -240,7 +276,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _clozeSentence(w),
+                    _clozeSentence(w, example),
                     style: const TextStyle(fontSize: 16, height: 1.6),
                   ),
                   const Divider(height: 20),
@@ -314,6 +350,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ] else
               _FeedbackBlock(
                 word: w,
+                example: example,
                 wasCorrect: _wasCorrect,
                 isMixed: isMixed,
                 onNext: _next,
@@ -327,11 +364,13 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
 class _FeedbackBlock extends StatelessWidget {
   final Word word;
+  final Example? example;
   final bool wasCorrect;
   final bool isMixed;
   final VoidCallback onNext;
   const _FeedbackBlock({
     required this.word,
+    required this.example,
     required this.wasCorrect,
     required this.isMixed,
     required this.onNext,
@@ -391,18 +430,38 @@ class _FeedbackBlock extends StatelessWidget {
             ],
           ),
         ),
-        if (word.examples.isNotEmpty) ...[
+        if (example != null) ...[
           const SizedBox(height: 12),
-          Text(
-            word.examples.first.sentence,
-            style: const TextStyle(fontSize: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  example!.sentence,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              SpeakButton(
+                text: example!.sentence,
+                isSentence: true,
+                tooltip: '예문 듣기',
+              ),
+            ],
           ),
-          if (word.examples.first.translation.isNotEmpty)
+          if (example!.translation.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                word.examples.first.translation,
+                example!.translation,
                 style: const TextStyle(color: AppColors.sub, fontSize: 13),
+              ),
+            ),
+          if (example!.source.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                '출처: ${example!.source}${example!.license.isEmpty ? '' : ' · ${example!.license}'}',
+                style: const TextStyle(color: AppColors.sub, fontSize: 10),
               ),
             ),
         ],

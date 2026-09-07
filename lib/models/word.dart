@@ -5,17 +5,32 @@ enum LearnStatus { fresh, learning, completed }
 class Example {
   final String sentence;
   final String translation;
+  final String source;
+  final String sourceId;
+  final String license;
 
-  const Example({required this.sentence, this.translation = ''});
+  const Example({
+    required this.sentence,
+    this.translation = '',
+    this.source = '',
+    this.sourceId = '',
+    this.license = '',
+  });
 
   Map<String, dynamic> toMap() => {
     'sentence': sentence,
     'translation': translation,
+    'source': source,
+    'sourceId': sourceId,
+    'license': license,
   };
 
   factory Example.fromMap(Map<String, dynamic> m) => Example(
     sentence: (m['sentence'] ?? '') as String,
     translation: (m['translation'] ?? '') as String,
+    source: (m['source'] ?? '') as String,
+    sourceId: (m['sourceId'] ?? '') as String,
+    license: (m['license'] ?? '') as String,
   );
 }
 

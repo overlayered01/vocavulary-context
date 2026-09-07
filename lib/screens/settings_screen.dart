@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../data/migration.dart';
 import '../providers.dart';
 import '../theme.dart';
-import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -14,8 +13,6 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final notifications = ref.read(notificationServiceProvider);
-    final cloudAvailable = ref.watch(cloudAvailableProvider);
-    final user = ref.watch(authUserProvider).asData?.value;
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
@@ -49,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
                     max: 100,
                     divisions: 20,
                     label: '${settings.reviewMixRatio}%',
-                    activeColor: AppColors.ink,
+                    activeColor: AppColors.accentDark,
                     onChanged: (v) => notifier.setMixRatio(v.round()),
                   ),
                   Text(
@@ -71,14 +68,15 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   title: const Text('복습 알림 받기'),
                   value: settings.reminderEnabled,
-                  activeThumbColor: AppColors.ink,
+                  activeThumbColor: AppColors.accentDark,
+                  activeTrackColor: AppColors.accentSoft,
                   onChanged: (v) async {
                     await notifier.setReminderEnabled(v);
                     if (v) {
                       await notifications.requestPermissions();
                       await _reschedule(ref);
                     } else {
-                      await notifications.cancelDailyReminder();
+                      await notifications.cancelReminder();
                     }
                   },
                 ),
@@ -107,6 +105,38 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 1),
+                ListTile(
+                  title: const Text('알림 간격'),
+                  subtitle: const Text(
+                    '선택한 시각을 기준으로 반복해요.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _reminderIntervalLabel(settings.reminderIntervalDays),
+                        style: const TextStyle(color: AppColors.sub),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.sub,
+                      ),
+                    ],
+                  ),
+                  onTap: () async {
+                    final days = await _pickReminderInterval(
+                      context,
+                      settings.reminderIntervalDays,
+                    );
+                    if (days != null) {
+                      await notifier.setReminderIntervalDays(days);
+                      await _reschedule(ref);
+                    }
+                  },
+                ),
+                const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('방해금지 시간'),
                   subtitle: const Text(
@@ -114,7 +144,8 @@ class SettingsScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 11),
                   ),
                   value: settings.quietEnabled,
-                  activeThumbColor: AppColors.ink,
+                  activeThumbColor: AppColors.accentDark,
+                  activeTrackColor: AppColors.accentSoft,
                   onChanged: (v) async {
                     await notifier.setQuietEnabled(v);
                     await _reschedule(ref);
@@ -212,79 +243,23 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 18),
-
-          // 계정·동기화
-          const _SectionLabel('계정 · 동기화'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text('클라우드 동기화'),
-                  trailing: Text(
-                    user != null ? '켜짐' : '꺼짐',
-                    style: TextStyle(
-                      color: user != null ? AppColors.ink : AppColors.sub,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                if (user != null) ...[
-                  ListTile(
-                    title: Text(user.email ?? user.id),
-                    trailing: const Text(
-                      '로그아웃',
-                      style: TextStyle(color: AppColors.sub),
-                    ),
-                    onTap: () => ref.read(authServiceProvider).signOut(),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.cloud_upload_outlined,
-                      color: AppColors.ink,
-                    ),
-                    title: const Text('이 기기의 단어장 가져오기'),
-                    subtitle: const Text(
-                      '로컬 모드에서 만든 단어장을 클라우드로 복사해요.',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    onTap: () => _importLocal(context, ref),
-                  ),
-                ] else
-                  ListTile(
-                    leading: const Icon(Icons.login, color: AppColors.ink),
-                    title: Text(
-                      cloudAvailable
-                          ? '로그인하고 기기 간 동기화'
-                          : 'Supabase 미설정 — 로컬 모드',
-                    ),
-                    subtitle: cloudAvailable
-                        ? null
-                        : const Text(
-                            'SUPABASE_설정가이드.md 참고',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                    enabled: cloudAvailable,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: cloudAvailable
-                        ? () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          )
-                        : null,
-                  ),
-              ],
-            ),
-          ),
           const SizedBox(height: 24),
           const Center(
             child: Text(
               'WordCloud 단어장 · MVP v0.1',
               style: TextStyle(color: AppColors.sub, fontSize: 12),
+            ),
+          ),
+          Center(
+            child: TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse('https://tatoeba.org'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: const Text(
+                '외부 예문: Tatoeba · CC BY 2.0 FR',
+                style: TextStyle(color: AppColors.sub, fontSize: 11),
+              ),
             ),
           ),
         ],
@@ -293,57 +268,37 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// 로컬 단어장을 클라우드로 이관한다. (로그인 상태에서만 노출되는 진입점)
-Future<void> _importLocal(BuildContext context, WidgetRef ref) async {
-  final repo = ref.read(repositoryProvider);
-  if (!repo.isCloud) return;
-  final local = ref.read(localRepositoryProvider);
-  final books = await local.getWordbooks();
-  if (!context.mounted) return;
+String _formatTime(int hour, int minute) =>
+    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
-  if (books.isEmpty) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('가져올 로컬 단어장이 없어요.')));
-    return;
-  }
+String _reminderIntervalLabel(int days) => switch (days) {
+  1 => '매일',
+  2 => '2일마다',
+  3 => '3일마다',
+  7 => '1주마다',
+  14 => '2주마다',
+  _ => '$days일마다',
+};
 
-  final ok = await showDialog<bool>(
+Future<int?> _pickReminderInterval(BuildContext context, int selected) {
+  const options = [1, 2, 3, 7, 14];
+  return showDialog<int>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('로컬 단어장 가져오기'),
-      content: Text(
-        '이 기기에서 만든 단어장 ${books.length}개를 클라우드로 복사할까요?\n'
-        '이미 클라우드에 있는 단어장은 건너뜁니다.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('취소'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('가져오기'),
-        ),
+    builder: (context) => SimpleDialog(
+      title: const Text('알림 간격'),
+      children: [
+        for (final days in options)
+          ListTile(
+            title: Text(_reminderIntervalLabel(days)),
+            trailing: days == selected
+                ? const Icon(Icons.check_rounded, color: AppColors.accentDark)
+                : null,
+            onTap: () => Navigator.pop(context, days),
+          ),
       ],
     ),
   );
-  if (ok != true || !context.mounted) return;
-
-  final migrated = await migrateLocalToCloud(local, repo);
-  invalidateData(ref);
-  if (!context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        migrated > 0 ? '단어장 $migrated개를 가져왔어요.' : '모든 단어장이 이미 클라우드에 있어요.',
-      ),
-    ),
-  );
 }
-
-String _formatTime(int hour, int minute) =>
-    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
 /// 최신 설정값으로 복습 알림을 다시 예약한다. (꺼져 있으면 아무것도 안 함)
 Future<void> _reschedule(WidgetRef ref) async {
@@ -351,9 +306,10 @@ Future<void> _reschedule(WidgetRef ref) async {
   if (!s.reminderEnabled) return;
   await ref
       .read(notificationServiceProvider)
-      .scheduleDailyReminder(
+      .scheduleReminder(
         hour: s.reminderHour,
         minute: s.reminderMinute,
+        intervalDays: s.reminderIntervalDays,
         quiet: s.quietWindow,
       );
 }

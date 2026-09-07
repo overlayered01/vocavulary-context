@@ -9,12 +9,14 @@ import '../theme.dart';
 class SpeakButton extends ConsumerWidget {
   final String text;
   final bool prominent;
+  final bool isSentence;
   final String tooltip;
 
   const SpeakButton({
     super.key,
     required this.text,
     this.prominent = false,
+    this.isSentence = false,
     this.tooltip = '발음 듣기',
   });
 
@@ -22,7 +24,11 @@ class SpeakButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     void speak() => ref
         .read(ttsServiceProvider)
-        .speak(text, locale: ref.read(settingsProvider).ttsLocale);
+        .speak(
+          text,
+          locale: ref.read(settingsProvider).ttsLocale,
+          isSentence: isSentence,
+        );
 
     if (prominent) {
       return IconButton.filledTonal(

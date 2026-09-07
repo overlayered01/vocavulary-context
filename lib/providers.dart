@@ -10,6 +10,7 @@ import 'models/study_log.dart';
 import 'models/word.dart';
 import 'models/wordbook.dart';
 import 'services/auth_service.dart';
+import 'services/example_source_service.dart';
 import 'services/notification_service.dart';
 import 'services/tts_service.dart';
 
@@ -27,6 +28,11 @@ final initialSettingsProvider = Provider<AppSettings>(
 
 // ---- 서비스 ----
 final ttsServiceProvider = Provider<TtsService>((ref) => TtsService());
+final exampleSourceServiceProvider = Provider<ExampleSourceService>((ref) {
+  final service = ExampleSourceService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(),
 );
@@ -76,6 +82,11 @@ class SettingsNotifier extends Notifier<AppSettings> {
     await _persist();
   }
 
+  Future<void> setReminderIntervalDays(int days) async {
+    state = state.copyWith(reminderIntervalDays: days);
+    await _persist();
+  }
+
   Future<void> setQuietEnabled(bool v) async {
     state = state.copyWith(quietEnabled: v);
     await _persist();
@@ -103,7 +114,7 @@ final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(
 
 // ---- 네비게이션 ----
 
-/// 하단 탭 인덱스 (0=홈, 1=단어장, 2=탐색, 3=설정). 홈의 바로가기 등에서 탭 전환에 사용.
+/// 하단 탭 인덱스 (0=홈, 1=단어장, 2=설정). 홈의 바로가기 등에서 탭 전환에 사용.
 class HomeTabNotifier extends Notifier<int> {
   @override
   int build() => 0;

@@ -56,9 +56,10 @@ Future<void> main() async {
       await notifications.requestPermissions();
       await prefs.setBool(permAskedKey, true);
     }
-    await notifications.scheduleDailyReminder(
+    await notifications.scheduleReminder(
       hour: settings.reminderHour,
       minute: settings.reminderMinute,
+      intervalDays: settings.reminderIntervalDays,
       quiet: settings.quietWindow,
     );
   }

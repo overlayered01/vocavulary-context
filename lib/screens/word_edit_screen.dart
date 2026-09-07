@@ -39,8 +39,9 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
   late final FocusNode _termFocus;
   late String _imageUrl;
   bool _pickingImage = false;
+  bool _fetchingExamples = false;
   late String _group;
-  late List<({TextEditingController s, TextEditingController t})> _examples;
+  late List<_EditableExample> _examples;
 
   @override
   void initState() {
@@ -54,18 +55,13 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     _imageUrl = w?.imageUrl ?? '';
     _group = w?.group ?? widget.initialGroup;
     _examples = (w?.examples ?? const <Example>[])
-        .map(
-          (e) => (
-            s: TextEditingController(text: e.sentence),
-            t: TextEditingController(text: e.translation),
-          ),
-        )
+        .map(_EditableExample.fromExample)
         .toList();
     if (_examples.isEmpty) _addExample();
   }
 
   void _addExample() {
-    _examples.add((s: TextEditingController(), t: TextEditingController()));
+    _examples.add(_EditableExample());
   }
 
   void _removeExample(int index) {
@@ -91,16 +87,92 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
       example.s.dispose();
       example.t.dispose();
     }
-    _examples = word.examples
-        .map(
-          (example) => (
-            s: TextEditingController(text: example.sentence),
-            t: TextEditingController(text: example.translation),
-          ),
-        )
-        .toList();
+    _examples = word.examples.map(_EditableExample.fromExample).toList();
     if (_examples.isEmpty) _addExample();
     setState(() {});
+  }
+
+  Future<void> _fetchExternalExamples() async {
+    final term = _term.text.trim();
+    if (term.isEmpty) {
+      _termFocus.requestFocus();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('먼저 영어 단어를 입력해 주세요.')));
+      return;
+    }
+    if (_fetchingExamples) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _fetchingExamples = true);
+    try {
+      final fetched = await ref
+          .read(exampleSourceServiceProvider)
+          .fetchExamples(term);
+      if (!mounted) return;
+
+      final existing = {
+        for (final example in _examples)
+          if (example.s.text.trim().isNotEmpty)
+            example.s.text.trim().toLowerCase(),
+      };
+      final candidates = fetched
+          .where(
+            (example) => !existing.contains(example.sentence.toLowerCase()),
+          )
+          .toList();
+      if (candidates.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              fetched.isEmpty
+                  ? "'$term'에 사용할 예문을 찾지 못했습니다."
+                  : '가져온 예문이 모두 이미 추가되어 있습니다.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final selected = await showDialog<List<Example>>(
+        context: context,
+        builder: (context) =>
+            _ExamplePickerDialog(term: term, examples: candidates),
+      );
+      if (selected == null || selected.isEmpty || !mounted) return;
+      _appendExamples(selected);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('예문 ${selected.length}개를 추가했습니다.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('예문을 가져오지 못했습니다: $error')));
+    } finally {
+      if (mounted) setState(() => _fetchingExamples = false);
+    }
+  }
+
+  void _appendExamples(List<Example> examples) {
+    setState(() {
+      for (final example in examples) {
+        final blankIndex = _examples.indexWhere(
+          (editable) => editable.s.text.trim().isEmpty,
+        );
+        if (blankIndex >= 0) {
+          final editable = _examples[blankIndex];
+          editable
+            ..s.text = example.sentence
+            ..t.text = example.translation
+            ..source = example.source
+            ..sourceId = example.sourceId
+            ..license = example.license;
+        } else {
+          _examples.add(_EditableExample.fromExample(example));
+        }
+      }
+    });
   }
 
   Future<void> _pickImage() async {
@@ -169,8 +241,13 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     final examples = _examples
         .where((e) => e.s.text.trim().isNotEmpty)
         .map(
-          (e) =>
-              Example(sentence: e.s.text.trim(), translation: e.t.text.trim()),
+          (e) => Example(
+            sentence: e.s.text.trim(),
+            translation: e.t.text.trim(),
+            source: e.source,
+            sourceId: e.sourceId,
+            license: e.license,
+          ),
         )
         .toList();
 
@@ -224,7 +301,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
             child: const Text(
               '저장',
               style: TextStyle(
-                color: AppColors.accent,
+                color: AppColors.accentDark,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -275,21 +352,39 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           ),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                '예문',
-                style: TextStyle(
-                  color: AppColors.sub,
-                  fontWeight: FontWeight.w600,
+              const Expanded(
+                child: Text(
+                  '예문',
+                  style: TextStyle(
+                    color: AppColors.sub,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+              ),
+              TextButton.icon(
+                onPressed: _fetchingExamples ? null : _fetchExternalExamples,
+                icon: _fetchingExamples
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.travel_explore_rounded, size: 18),
+                label: Text(_fetchingExamples ? '검색 중' : '예문 가져오기'),
               ),
               TextButton.icon(
                 onPressed: () => setState(_addExample),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('예문 추가'),
+                label: const Text('직접 추가'),
               ),
             ],
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Text(
+              '예문을 2개 이상 저장하면 복습할 때마다 자동으로 바뀌어요.',
+              style: TextStyle(color: AppColors.sub, fontSize: 12),
+            ),
           ),
           ..._examples.asMap().entries.map((entry) {
             final i = entry.key;
@@ -335,6 +430,19 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
                         hintText: '이것은 중대한 결정이다.',
                       ),
                     ),
+                    if (e.source.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '출처: ${e.source}${e.license.isEmpty ? '' : ' · ${e.license}'}',
+                          style: const TextStyle(
+                            color: AppColors.sub,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -436,8 +544,10 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           decoration: const InputDecoration(
             labelText: '단어 *',
             hintText: 'e.g. crucial',
-            helperText: '저장된 단어를 선택하면 뜻과 예문을 자동으로 채웁니다.',
-            suffixIcon: Icon(Icons.auto_awesome_outlined, size: 20),
+            suffixIcon: Tooltip(
+              message: '저장된 단어를 선택하면 뜻과 예문을 자동으로 채웁니다.',
+              child: Icon(Icons.auto_awesome_outlined, size: 20),
+            ),
           ),
         );
       },
@@ -487,4 +597,138 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
       decoration: InputDecoration(labelText: label, hintText: hint),
     ),
   );
+}
+
+class _EditableExample {
+  final TextEditingController s;
+  final TextEditingController t;
+  String source;
+  String sourceId;
+  String license;
+
+  _EditableExample({
+    String sentence = '',
+    String translation = '',
+    this.source = '',
+    this.sourceId = '',
+    this.license = '',
+  }) : s = TextEditingController(text: sentence),
+       t = TextEditingController(text: translation);
+
+  factory _EditableExample.fromExample(Example example) => _EditableExample(
+    sentence: example.sentence,
+    translation: example.translation,
+    source: example.source,
+    sourceId: example.sourceId,
+    license: example.license,
+  );
+}
+
+class _ExamplePickerDialog extends StatefulWidget {
+  final String term;
+  final List<Example> examples;
+
+  const _ExamplePickerDialog({required this.term, required this.examples});
+
+  @override
+  State<_ExamplePickerDialog> createState() => _ExamplePickerDialogState();
+}
+
+class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
+  late final Set<int> _selected = {
+    for (var i = 0; i < widget.examples.length; i++) i,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.76;
+    return Dialog(
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 560, maxHeight: maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "'${widget.term}' 예문",
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '추가할 예문을 선택하세요. 번역이 없는 문장은 직접 입력할 수 있어요.',
+                style: TextStyle(color: AppColors.sub, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: widget.examples.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final example = widget.examples[index];
+                    return CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _selected.contains(index),
+                      title: Text(
+                        example.sentence,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      subtitle: example.translation.isEmpty
+                          ? const Text(
+                              '한국어 번역 없음',
+                              style: TextStyle(fontSize: 12),
+                            )
+                          : Text(
+                              example.translation,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                      onChanged: (checked) => setState(() {
+                        if (checked ?? false) {
+                          _selected.add(index);
+                        } else {
+                          _selected.remove(index);
+                        }
+                      }),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '예문 출처: Tatoeba · CC BY 2.0 FR',
+                style: TextStyle(color: AppColors.sub, fontSize: 11),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('취소'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _selected.isEmpty
+                          ? null
+                          : () => Navigator.pop(context, [
+                              for (var i = 0; i < widget.examples.length; i++)
+                                if (_selected.contains(i)) widget.examples[i],
+                            ]),
+                      child: Text('선택한 예문 추가 (${_selected.length})'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -81,8 +81,8 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.ink,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.ink,
         icon: const Icon(Icons.add),
         label: const Text('단어 추가'),
         onPressed: () => _openEditor(null),

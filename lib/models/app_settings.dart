@@ -13,6 +13,9 @@ class AppSettings {
   final int reminderHour;
   final int reminderMinute;
 
+  /// 복습 알림 반복 간격(일). 1이면 매일 알림.
+  final int reminderIntervalDays;
+
   /// 방해금지(조용한 시간) 사용 여부. 이 시간대에는 복습 알림을 미룬다.
   final bool quietEnabled;
 
@@ -33,6 +36,7 @@ class AppSettings {
     this.reminderEnabled = true,
     this.reminderHour = 9,
     this.reminderMinute = 0,
+    this.reminderIntervalDays = 1,
     this.quietEnabled = false,
     this.quietStartHour = 22,
     this.quietStartMinute = 0,
@@ -55,6 +59,7 @@ class AppSettings {
     bool? reminderEnabled,
     int? reminderHour,
     int? reminderMinute,
+    int? reminderIntervalDays,
     bool? quietEnabled,
     int? quietStartHour,
     int? quietStartMinute,
@@ -68,6 +73,7 @@ class AppSettings {
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
+      reminderIntervalDays: reminderIntervalDays ?? this.reminderIntervalDays,
       quietEnabled: quietEnabled ?? this.quietEnabled,
       quietStartHour: quietStartHour ?? this.quietStartHour,
       quietStartMinute: quietStartMinute ?? this.quietStartMinute,
@@ -83,6 +89,7 @@ class AppSettings {
     'reminderEnabled': reminderEnabled,
     'reminderHour': reminderHour,
     'reminderMinute': reminderMinute,
+    'reminderIntervalDays': reminderIntervalDays,
     'quietEnabled': quietEnabled,
     'quietStartHour': quietStartHour,
     'quietStartMinute': quietStartMinute,
@@ -97,6 +104,7 @@ class AppSettings {
     reminderEnabled: (m['reminderEnabled'] ?? true) as bool,
     reminderHour: (m['reminderHour'] ?? 9) as int,
     reminderMinute: (m['reminderMinute'] ?? 0) as int,
+    reminderIntervalDays: (m['reminderIntervalDays'] ?? 1) as int,
     quietEnabled: (m['quietEnabled'] ?? false) as bool,
     quietStartHour: (m['quietStartHour'] ?? 22) as int,
     quietStartMinute: (m['quietStartMinute'] ?? 0) as int,

@@ -96,37 +96,72 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         appBar: AppBar(title: const Text('탐색')),
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.travel_explore_outlined,
-                  size: 44,
-                  color: AppColors.sub,
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  '공유 단어장 탐색은\n로그인 후 사용할 수 있어요.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.sub, height: 1.5),
-                ),
-                if (cloudAvailable) ...[
-                  const SizedBox(height: 18),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    ),
-                    child: const Text('로그인하기'),
+            padding: const EdgeInsets.all(20),
+            child: Card(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: const BoxDecoration(
+                          color: AppColors.accentSoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.travel_explore_rounded,
+                          size: 30,
+                          color: AppColors.accentDark,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        '새로운 단어장을\n둘러보세요',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        '공유 단어장 탐색은 로그인 후 사용할 수 있어요.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.sub,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (cloudAvailable) ...[
+                        const SizedBox(height: 22),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            ),
+                            child: const Text('로그인하기'),
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Supabase 연결 후 사용할 수 있습니다.',
+                          style: TextStyle(color: AppColors.sub, fontSize: 11),
+                        ),
+                      ],
+                    ],
                   ),
-                ] else ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    '(Supabase 미설정 — SUPABASE_설정가이드.md 참고)',
-                    style: TextStyle(color: AppColors.sub, fontSize: 11),
-                  ),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
         ),
@@ -138,7 +173,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('탐색')),
       body: RefreshIndicator(
-        color: AppColors.ink,
+        color: AppColors.accentDark,
         onRefresh: () => ref.refresh(publicWordbooksProvider.future),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
