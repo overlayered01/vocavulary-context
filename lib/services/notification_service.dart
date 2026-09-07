@@ -10,7 +10,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'review_reminder';
-  static const _dailyId = 1001;
+  static const _reminderBaseId = 1001;
+  static const _scheduledReminderCount = 32;
 
   bool _initialized = false;
 
@@ -59,20 +60,21 @@ class NotificationService {
     await ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  /// 매일 지정 시각에 반복되는 복습 알림을 예약한다.
+  /// 지정 시각과 일 단위 간격으로 복습 알림을 예약한다.
   ///
   /// [quiet]가 주어지고 알림 시각이 방해금지 구간 안이면
   /// 구간이 끝나는 시각으로 미뤄서 예약한다.
-  Future<void> scheduleDailyReminder({
+  Future<void> scheduleReminder({
     required int hour,
     required int minute,
+    required int intervalDays,
     ({int startMinutes, int endMinutes})? quiet,
     String title = '복습 시간이에요',
     String body = '오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!',
   }) async {
     if (kIsWeb) return;
     await init();
-    await cancelDailyReminder();
+    await cancelReminder();
 
     if (quiet != null && _inQuietWindow(hour * 60 + minute, quiet)) {
       hour = quiet.endMinutes ~/ 60;
@@ -91,23 +93,48 @@ class NotificationService {
     );
 
     try {
-      await _plugin.zonedSchedule(
-        id: _dailyId,
-        title: title,
-        body: body,
-        scheduledDate: _nextInstanceOf(hour, minute),
-        notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time, // 매일 반복
-      );
+      if (intervalDays <= 1) {
+        await _plugin.zonedSchedule(
+          id: _reminderBaseId,
+          title: title,
+          body: body,
+          scheduledDate: _nextInstanceOf(hour, minute),
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+        return;
+      }
+
+      final first = _nextInstanceOf(hour, minute);
+      for (var i = 0; i < _scheduledReminderCount; i++) {
+        final scheduledDate = tz.TZDateTime(
+          tz.local,
+          first.year,
+          first.month,
+          first.day + i * intervalDays,
+          hour,
+          minute,
+        );
+        await _plugin.zonedSchedule(
+          id: _reminderBaseId + i,
+          title: title,
+          body: body,
+          scheduledDate: scheduledDate,
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
     } catch (e) {
       debugPrint('알림 예약 실패: $e');
     }
   }
 
-  Future<void> cancelDailyReminder() async {
+  Future<void> cancelReminder() async {
     if (kIsWeb) return;
-    await _plugin.cancel(id: _dailyId);
+    for (var i = 0; i < _scheduledReminderCount; i++) {
+      await _plugin.cancel(id: _reminderBaseId + i);
+    }
   }
 
   /// [minutes](자정 기준 분)가 방해금지 구간 안인지. 자정을 넘는 구간도 지원.

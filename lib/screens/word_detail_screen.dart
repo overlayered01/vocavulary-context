@@ -212,7 +212,11 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                             style: const TextStyle(fontSize: 14),
                           ),
                         ),
-                        SpeakButton(text: e.sentence, tooltip: '예문 듣기'),
+                        SpeakButton(
+                          text: e.sentence,
+                          isSentence: true,
+                          tooltip: '예문 듣기',
+                        ),
                       ],
                     ),
                     if (e.translation.isNotEmpty) ...[
@@ -222,6 +226,37 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                         style: const TextStyle(
                           color: AppColors.sub,
                           fontSize: 13,
+                        ),
+                      ),
+                    ],
+                    if (e.source.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: e.source == 'Tatoeba' && e.sourceId.isNotEmpty
+                            ? () => _open(
+                                'https://tatoeba.org/en/sentences/show/${e.sourceId}',
+                              )
+                            : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '출처: ${e.source}${e.license.isEmpty ? '' : ' · ${e.license}'}',
+                              style: const TextStyle(
+                                color: AppColors.sub,
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (e.source == 'Tatoeba' &&
+                                e.sourceId.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.open_in_new_rounded,
+                                color: AppColors.sub,
+                                size: 13,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],

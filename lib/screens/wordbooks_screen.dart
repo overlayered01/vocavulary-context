@@ -20,6 +20,10 @@ class WordbooksScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: '새 단어장',
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.card,
+              fixedSize: const Size.square(40),
+            ),
             icon: const Icon(Icons.add),
             onPressed: () => _createDialog(context, ref),
           ),
@@ -140,18 +144,32 @@ class _WordbookCard extends ConsumerWidget {
 
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => WordbookDetailScreen(book: book)),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 8, 18),
+          padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: AppColors.accentDark,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 13),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 6),
+                  padding: const EdgeInsets.only(top: 2),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

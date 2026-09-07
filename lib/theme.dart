@@ -1,38 +1,47 @@
 import 'package:flutter/material.dart';
 
-/// 모노크롬 미니멀 팔레트.
-/// 강조색 없이 잉크(검정)·회색·순백 + 얇은 구분선만으로 위계를 표현한다.
+/// 밝은 라임 포인트와 따뜻한 뉴트럴 톤을 사용하는 공통 팔레트.
 class AppColors {
-  /// 핵심 액션(버튼·아이콘)에 쓰는 잉크색. 과거 파란 강조색을 대체한다.
-  static const accent = Color(0xFF111111);
-  static const accentSoft = Color(0xFFF2F2F4);
-  static const bg = Color(0xFFFFFFFF);
-  static const ink = Color(0xFF111111);
-  static const sub = Color(0xFF9A9AA2);
-  static const line = Color(0xFFEDEDF0);
-
-  /// 카드/패널 면. 순백 배경 위에서 살짝 떠 보이도록 한 톤 낮춘 회색.
-  static const card = Color(0xFFF7F7F8);
-  static const chip = Color(0xFFF1F1F3);
-
-  /// 정답/오답 등 상태도 모노크롬으로 통일(아이콘·텍스트로 구분).
-  static const ok = Color(0xFF111111);
-  static const warn = Color(0xFF9A9AA2);
+  static const accent = Color(0xFFA7E63D);
+  static const accentSoft = Color(0xFFE8F8C8);
+  static const accentDark = Color(0xFF557D12);
+  static const bg = Color(0xFFF4F5F1);
+  static const ink = Color(0xFF171A16);
+  static const sub = Color(0xFF7D8178);
+  static const line = Color(0xFFE5E8E0);
+  static const card = Color(0xFFFFFFFF);
+  static const chip = Color(0xFFEEF0EA);
+  static const ok = Color(0xFF557D12);
+  static const warn = Color(0xFF8A6D24);
 }
 
 ThemeData buildAppTheme() {
+  final colorScheme =
+      ColorScheme.fromSeed(
+        seedColor: AppColors.accent,
+        brightness: Brightness.light,
+      ).copyWith(
+        primary: AppColors.accent,
+        onPrimary: AppColors.ink,
+        primaryContainer: AppColors.accentSoft,
+        onPrimaryContainer: AppColors.ink,
+        surface: AppColors.card,
+        onSurface: AppColors.ink,
+        outline: AppColors.line,
+      );
+
   final base = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.ink,
-      primary: AppColors.ink,
-      surface: AppColors.bg,
-    ),
+    colorScheme: colorScheme,
     scaffoldBackgroundColor: AppColors.bg,
     fontFamily: 'Roboto',
   );
 
   return base.copyWith(
+    textTheme: base.textTheme.apply(
+      bodyColor: AppColors.ink,
+      displayColor: AppColors.ink,
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.bg,
       foregroundColor: AppColors.ink,
@@ -41,14 +50,14 @@ ThemeData buildAppTheme() {
       centerTitle: false,
       titleTextStyle: TextStyle(
         color: AppColors.ink,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
       ),
     ),
     cardTheme: CardThemeData(
       color: AppColors.card,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       margin: EdgeInsets.zero,
     ),
     dividerTheme: const DividerThemeData(
@@ -58,37 +67,68 @@ ThemeData buildAppTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.ink,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.ink,
         elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.ink,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: AppColors.card,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         side: const BorderSide(color: AppColors.line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: AppColors.ink),
     ),
-    inputDecorationTheme: const InputDecorationTheme(
-      filled: false,
-      border: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.line),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.line),
       ),
-      enabledBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.line),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.line),
       ),
-      focusedBorder: UnderlineInputBorder(
-        borderSide: BorderSide(color: AppColors.ink, width: 1.5),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.accentDark, width: 1.5),
       ),
+      floatingLabelStyle: const TextStyle(color: AppColors.accentDark),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: AppColors.card,
+      selectedColor: AppColors.accentSoft,
+      side: const BorderSide(color: AppColors.line),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      labelStyle: const TextStyle(
+        color: AppColors.ink,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    navigationBarTheme: const NavigationBarThemeData(
+      height: 72,
+      backgroundColor: AppColors.card,
+      indicatorColor: AppColors.accent,
+      elevation: 0,
+      labelTextStyle: WidgetStatePropertyAll(
+        TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+      iconTheme: WidgetStatePropertyAll(IconThemeData(size: 22)),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.accentDark,
+      linearTrackColor: AppColors.accentSoft,
     ),
   );
 }
