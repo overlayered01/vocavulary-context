@@ -7,18 +7,20 @@ import '../providers.dart';
 import '../theme.dart';
 import '../widgets/speak_button.dart';
 import '../widgets/word_image.dart';
+import '../widgets/meaning_fields.dart';
+import '../widgets/dictionary_links.dart';
+import '../widgets/dictionary_lookup.dart';
 import 'word_edit_screen.dart';
+import 'word_image_editor.dart';
 
 /// 단어 상세: 뜻·예문·발음(TTS)·사전 딥링크.
 class WordDetailScreen extends ConsumerStatefulWidget {
   final Word word;
   final String wordbookTitle;
-  final List<String> groups;
   const WordDetailScreen({
     super.key,
     required this.word,
     this.wordbookTitle = '',
-    this.groups = const [],
   });
 
   @override
@@ -40,8 +42,6 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
         builder: (_) => WordEditScreen(
           wordbookId: _word.wordbookId,
           wordbookTitle: widget.wordbookTitle,
-          groups: widget.groups,
-          initialGroup: _word.group,
           existing: _word,
         ),
       ),
@@ -58,6 +58,11 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
     }
   }
 
+  Future<void> _editImage() async {
+    final saved = await editWordImage(context, ref, _word);
+    if (mounted && saved != null) setState(() => _word = saved);
+  }
+
   Future<void> _toggleFavorite() async {
     final updated = await ref
         .read(repositoryProvider)
@@ -67,6 +72,40 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
     if (!mounted) return;
     setState(() => _word = updated);
     invalidateData(ref);
+  }
+
+  Future<void> _addDictionaryMeanings(DictionarySelection selection) async {
+    final repo = ref.read(repositoryProvider);
+    final words = await repo.getWords(_word.wordbookId);
+    final latest = words.where((word) => word.id == _word.id).firstOrNull;
+    if (latest == null || latest.term.trim() != selection.term) {
+      throw StateError('Word changed or was deleted');
+    }
+    final meanings = Word.normalizeMeanings([
+      ...latest.meanings,
+      ...selection.senses.map((sense) => sense.meaning),
+    ]);
+    if (meanings.length == latest.meanings.length) return;
+    final updated = await repo.upsertWord(
+      latest.copyWith(
+        meanings: meanings,
+        dictionarySourceTerms: {
+          ...latest.dictionarySourceTerms,
+          selection.term,
+        }.toList(),
+        partOfSpeech: latest.partOfSpeech.isEmpty
+            ? selection.suggestedPartOfSpeech
+            : latest.partOfSpeech,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _word = updated);
+    ref.invalidate(wordsProvider(updated.wordbookId));
+    invalidateData(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('선택한 사전 뜻을 추가했어요.')));
   }
 
   @override
@@ -170,12 +209,12 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            '뜻',
+                            '내가 저장한 뜻',
                             style: TextStyle(color: AppColors.sub),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            word.meaning,
+                          MeaningList(
+                            meanings: word.meanings,
                             style: const TextStyle(fontSize: 15),
                           ),
                         ],
@@ -192,6 +231,13 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          DictionaryLookupButton(
+            term: word.term,
+            meanings: () => word.meanings,
+            onSelected: _addDictionaryMeanings,
+          ),
+          DictionaryAttribution(terms: word.dictionarySourceTerms),
+          const SizedBox(height: 8),
           _imageSection(word),
           const SizedBox(height: 18),
           const _Label('예문'),
@@ -266,18 +312,13 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const _Label('사전에서 더 보기'),
-          _LinkTile(
-            text: '네이버 사전 — 원어민 발음·예문',
-            onTap: () => _open(
-              'https://dict.naver.com/dict.search?query=${Uri.encodeComponent(word.term)}',
-            ),
-          ),
-          _LinkTile(
-            text: '구글 번역',
-            onTap: () => _open(
+          DictionaryLinks(term: word.term),
+          TextButton.icon(
+            onPressed: () => _open(
               'https://translate.google.com/?sl=en&tl=ko&text=${Uri.encodeComponent(word.term)}',
             ),
+            icon: const Icon(Icons.open_in_new, size: 15),
+            label: const Text('구글 번역'),
           ),
         ],
       ),
@@ -302,7 +343,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
             ),
             if (word.imageUrl.isNotEmpty)
               TextButton.icon(
-                onPressed: _edit,
+                onPressed: _editImage,
                 icon: const Icon(Icons.edit_outlined, size: 17),
                 label: const Text('변경'),
               ),
@@ -313,7 +354,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
           Card(
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: _edit,
+              onTap: _editImage,
               child: AspectRatio(
                 aspectRatio: 16 / 9,
                 child: WordImage(
@@ -329,7 +370,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
             width: double.infinity,
             height: 112,
             child: OutlinedButton.icon(
-              onPressed: _edit,
+              onPressed: _editImage,
               icon: const Icon(Icons.add_photo_alternate_outlined),
               label: const Text('대표 이미지 추가'),
             ),
@@ -358,26 +399,6 @@ class _Label extends StatelessWidget {
         color: AppColors.sub,
         fontSize: 13,
         fontWeight: FontWeight.w600,
-      ),
-    ),
-  );
-}
-
-class _LinkTile extends StatelessWidget {
-  final String text;
-  final VoidCallback onTap;
-  const _LinkTile({required this.text, required this.onTap});
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(14),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(text, style: const TextStyle(fontSize: 14)),
-        trailing: const Icon(Icons.open_in_new, size: 18, color: AppColors.sub),
-        onTap: onTap,
       ),
     ),
   );
