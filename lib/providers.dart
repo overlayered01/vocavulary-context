@@ -11,8 +11,10 @@ import 'models/word.dart';
 import 'models/wordbook.dart';
 import 'services/auth_service.dart';
 import 'services/example_source_service.dart';
+import 'services/dictionary_service.dart';
 import 'services/notification_service.dart';
 import 'services/tts_service.dart';
+import 'services/word_draft_service.dart';
 
 /// 부팅 시 override로 주입되는 프로바이더들.
 final sharedPrefsProvider = Provider<SharedPreferences>(
@@ -28,11 +30,22 @@ final initialSettingsProvider = Provider<AppSettings>(
 
 // ---- 서비스 ----
 final ttsServiceProvider = Provider<TtsService>((ref) => TtsService());
+final dictionaryServiceProvider = Provider<DictionaryService>((ref) {
+  final service = DictionaryService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 final exampleSourceServiceProvider = Provider<ExampleSourceService>((ref) {
   final service = ExampleSourceService();
   ref.onDispose(service.dispose);
   return service;
 });
+final wordDraftServiceProvider = Provider<WordDraftService>(
+  (ref) => WordDraftService(
+    dictionary: ref.watch(dictionaryServiceProvider),
+    examples: ref.watch(exampleSourceServiceProvider),
+  ),
+);
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(),
 );

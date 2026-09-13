@@ -7,6 +7,7 @@ import '../data/review_examples.dart';
 import '../data/srs.dart';
 import '../models/study_log.dart';
 import '../models/word.dart';
+import '../widgets/meaning_fields.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../widgets/speak_button.dart';
@@ -280,10 +281,23 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     style: const TextStyle(fontSize: 16, height: 1.6),
                   ),
                   const Divider(height: 20),
-                  Text(
-                    '${w.meaning}${w.partOfSpeech.isNotEmpty ? " · ${w.partOfSpeech}" : ""}${w.phonetic.isNotEmpty ? " ${w.phonetic}" : ""}',
+                  MeaningList(
+                    meanings: w.meanings,
                     style: const TextStyle(color: AppColors.sub, fontSize: 13),
                   ),
+                  if (w.partOfSpeech.isNotEmpty || w.phonetic.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      [
+                        w.partOfSpeech,
+                        w.phonetic,
+                      ].where((value) => value.isNotEmpty).join(' · '),
+                      style: const TextStyle(
+                        color: AppColors.sub,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

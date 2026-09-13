@@ -7,6 +7,8 @@ import '../models/word.dart';
 /// Tatoeba의 공개 API에서 영어 예문과 가능한 한국어 번역을 가져온다.
 class ExampleSourceService {
   final http.Client _client;
+  final _cache = <(String, int), ({List<Example> values, DateTime expires})>{};
+  final _pending = <(String, int), Future<List<Example>>>{};
 
   ExampleSourceService({http.Client? client})
     : _client = client ?? http.Client();
@@ -15,6 +17,33 @@ class ExampleSourceService {
   static const _path = '/v1/sentences';
 
   Future<List<Example>> fetchExamples(String term, {int limit = 6}) async {
+    final query = term.trim();
+    if (query.isEmpty) return const [];
+    final key = (query, limit);
+    final cached = _cache[key];
+    if (cached != null && cached.expires.isAfter(DateTime.now())) {
+      return cached.values;
+    }
+    final inFlight = _pending[key];
+    if (inFlight != null) return inFlight;
+    final request = _loadExamples(query, limit: limit);
+    _pending[key] = request;
+    try {
+      final values = List<Example>.unmodifiable(await request);
+      if (values.isNotEmpty) {
+        if (_cache.length >= 50) _cache.remove(_cache.keys.first);
+        _cache[key] = (
+          values: values,
+          expires: DateTime.now().add(const Duration(minutes: 10)),
+        );
+      }
+      return values;
+    } finally {
+      _pending.remove(key);
+    }
+  }
+
+  Future<List<Example>> _loadExamples(String term, {required int limit}) async {
     final normalized = term.trim();
     if (normalized.isEmpty) return const [];
 
@@ -27,11 +56,13 @@ class ExampleSourceService {
     );
     if (translated.length >= limit) return translated.take(limit).toList();
 
-    final english = await _fetch(
-      normalized,
-      limit: limit,
-      requireKorean: false,
-    );
+    final List<Example> english;
+    try {
+      english = await _fetch(normalized, limit: limit, requireKorean: false);
+    } catch (_) {
+      if (translated.isNotEmpty) return translated;
+      rethrow;
+    }
     final unique = <String, Example>{
       for (final example in translated) example.sentence.toLowerCase(): example,
     };

@@ -42,7 +42,26 @@ class Word {
   /// 단어장 내 소분류 그룹명. 빈 문자열이면 '그룹 없음'.
   final String group;
   final String term;
-  final String meaning;
+  final String _legacyMeaning;
+  final List<String> _meanings;
+
+  /// Original Wiktionary lookup terms; retained when imported text is edited.
+  final List<String> dictionarySourceTerms;
+
+  List<String> get meanings =>
+      normalizeMeanings(_meanings.isNotEmpty ? _meanings : [_legacyMeaning]);
+
+  /// 한 줄 요약이 필요한 화면과 이전 저장 형식에서 사용한다.
+  String get meaning => meanings.join(' · ');
+
+  static List<String> normalizeMeanings(Iterable<String> values) {
+    final seen = <String>{};
+    return [
+      for (final value in values)
+        if (value.trim().isNotEmpty && seen.add(value.trim())) value.trim(),
+    ];
+  }
+
   final String partOfSpeech;
   final String phonetic;
 
@@ -73,7 +92,9 @@ class Word {
     required this.wordbookId,
     this.group = '',
     required this.term,
-    required this.meaning,
+    String meaning = '',
+    List<String> meanings = const [],
+    this.dictionarySourceTerms = const [],
     this.partOfSpeech = '',
     this.phonetic = '',
     this.imageUrl = '',
@@ -87,7 +108,8 @@ class Word {
     this.timesWrong = 0,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : _legacyMeaning = meaning,
+       _meanings = meanings;
 
   /// 첫 글자 + 글자 수 힌트 (예: "c r _ _ _ _ _").
   String get inputHint {
@@ -103,6 +125,8 @@ class Word {
     String? group,
     String? term,
     String? meaning,
+    List<String>? meanings,
+    List<String>? dictionarySourceTerms,
     String? partOfSpeech,
     String? phonetic,
     String? imageUrl,
@@ -121,7 +145,9 @@ class Word {
       wordbookId: wordbookId,
       group: group ?? this.group,
       term: term ?? this.term,
-      meaning: meaning ?? this.meaning,
+      meanings: meanings ?? (meaning == null ? this.meanings : [meaning]),
+      dictionarySourceTerms:
+          dictionarySourceTerms ?? this.dictionarySourceTerms,
       partOfSpeech: partOfSpeech ?? this.partOfSpeech,
       phonetic: phonetic ?? this.phonetic,
       imageUrl: imageUrl ?? this.imageUrl,
@@ -144,6 +170,8 @@ class Word {
     'group': group,
     'term': term,
     'meaning': meaning,
+    'meanings': meanings,
+    'dictionarySourceTerms': dictionarySourceTerms,
     'partOfSpeech': partOfSpeech,
     'phonetic': phonetic,
     'imageUrl': imageUrl,
@@ -168,6 +196,14 @@ class Word {
       group: (m['group'] ?? '') as String,
       term: (m['term'] ?? '') as String,
       meaning: (m['meaning'] ?? '') as String,
+      meanings: m['meanings'] is List
+          ? normalizeMeanings((m['meanings'] as List).whereType<String>())
+          : const [],
+      dictionarySourceTerms: m['dictionarySourceTerms'] is List
+          ? normalizeMeanings(
+              (m['dictionarySourceTerms'] as List).whereType<String>(),
+            )
+          : const [],
       partOfSpeech: (m['partOfSpeech'] ?? '') as String,
       phonetic: (m['phonetic'] ?? '') as String,
       imageUrl: (m['imageUrl'] ?? m['image'] ?? '') as String,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,64 @@ import 'package:vocabulary/models/word.dart';
 import 'package:vocabulary/services/example_source_service.dart';
 
 void main() {
+  test('동시에 요청한 예문과 최근 조회 결과를 재사용한다', () async {
+    var requests = 0;
+    final pending = Completer<http.Response>();
+    final service = ExampleSourceService(
+      client: MockClient((_) {
+        requests++;
+        return pending.future;
+      }),
+    );
+    addTearDown(service.dispose);
+    final first = service.fetchExamples(' happy ', limit: 2);
+    final second = service.fetchExamples('happy', limit: 2);
+    pending.complete(
+      http.Response(
+        jsonEncode({
+          'data': [
+            {'text': 'A happy day.'},
+            {'text': 'I am happy.'},
+          ],
+        }),
+        200,
+      ),
+    );
+    expect(await first, hasLength(2));
+    expect(await second, hasLength(2));
+    expect(await service.fetchExamples('happy', limit: 2), hasLength(2));
+    expect(requests, 1);
+  });
+
+  test('영어 예문 추가 조회가 실패해도 먼저 받은 한국어 예문은 유지한다', () async {
+    final service = ExampleSourceService(
+      client: MockClient((request) async {
+        if (!request.url.queryParameters.containsKey('trans:lang')) {
+          return http.Response('', 503);
+        }
+        return http.Response(
+          jsonEncode({
+            'data': [
+              {
+                'text': 'A happy day.',
+                'translations': [
+                  {'lang': 'kor', 'text': '행복한 하루.'},
+                ],
+              },
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+    expect(
+      (await service.fetchExamples('happy', limit: 2)).single.translation,
+      '행복한 하루.',
+    );
+  });
+
   group('Srs', () {
     Word makeWord({LearnStatus status = LearnStatus.fresh}) {
       final now = DateTime(2026, 1, 1);
