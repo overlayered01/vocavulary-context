@@ -33,6 +33,31 @@ class Srs {
     );
   }
 
+  /// 사용자가 '남기기'를 고른 카드. 마지막 단계에 닿았어도 덱에 남긴다.
+  static Word keep(Word w) {
+    if (w.status != LearnStatus.completed) return w;
+    return w.copyWith(
+      status: LearnStatus.learning,
+      srsStage: intervalsDays.length - 1,
+    );
+  }
+
+  /// 외운 카드를 버린다. 버린 카드는 복습에 다시 섞일 때만 나온다.
+  static Word discard(Word w, DateTime now) => w.copyWith(
+    status: LearnStatus.completed,
+    srsStage: intervalsDays.length,
+    completedAt: w.completedAt ?? now,
+    updatedAt: now,
+  );
+
+  /// 버린 카드를 덱에 다시 넣는다. 곧바로 복습 대상이 된다.
+  static Word restore(Word w, DateTime now) => w.copyWith(
+    status: LearnStatus.learning,
+    srsStage: 0,
+    nextReviewAt: now,
+    updatedAt: now,
+  );
+
   /// 복습 대상 여부: 신규이거나, 복습 예정 시각이 지났으면 true.
   static bool isDue(Word w, DateTime now) {
     if (w.status == LearnStatus.completed) return false;

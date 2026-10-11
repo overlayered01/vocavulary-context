@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vocabulary/data/local_repository.dart';
 import 'package:vocabulary/data/migration.dart';
+import 'package:vocabulary/models/translation_language.dart';
 import 'package:vocabulary/models/word.dart';
 import 'package:vocabulary/models/wordbook.dart';
 import 'package:vocabulary/providers.dart';
@@ -94,6 +95,52 @@ void main() {
     );
   });
 
+  test('번역 언어마다 현지 사전·Cambridge·Oxford 순으로 링크를 고른다', () {
+    String firstHost(TranslationLanguage language) =>
+        DictionarySource.forLanguage(
+          language,
+        ).first.searchUri('run', language).host;
+    expect(firstHost(TranslationLanguage.korean), 'en.dict.naver.com');
+    expect(firstHost(TranslationLanguage.japanese), 'ejje.weblio.jp');
+    expect(firstHost(TranslationLanguage.chinese), 'dict.youdao.com');
+    expect(firstHost(TranslationLanguage.spanish), 'www.spanishdict.com');
+    expect(firstHost(TranslationLanguage.german), 'dict.leo.org');
+    expect(firstHost(TranslationLanguage.thai), 'dict.longdo.com');
+    expect(firstHost(TranslationLanguage.english), 'www.merriam-webster.com');
+    expect(DictionarySource.forLanguage(TranslationLanguage.vietnamese), [
+      DictionarySource.cambridge,
+      DictionarySource.oxford,
+    ]);
+    for (final language in TranslationLanguage.values) {
+      final sources = DictionarySource.forLanguage(language);
+      expect(sources.sublist(sources.length - 2), [
+        DictionarySource.cambridge,
+        DictionarySource.oxford,
+      ]);
+      for (final source in sources) {
+        expect(source.searchUri('take off', language).scheme, 'https');
+      }
+    }
+    String cambridgePath(TranslationLanguage language) =>
+        DictionarySource.cambridge.searchUri('run', language).path;
+    expect(
+      cambridgePath(TranslationLanguage.chinese),
+      '/search/english-chinese-simplified/direct/',
+    );
+    expect(
+      cambridgePath(TranslationLanguage.indonesian),
+      '/search/english-indonesian/direct/',
+    );
+    expect(
+      cambridgePath(TranslationLanguage.english),
+      '/search/english/direct/',
+    );
+    expect(
+      DictionarySource.weblio.searchUri('take off').toString(),
+      'https://ejje.weblio.jp/content/take%20off',
+    );
+  });
+
   Future<void> open(WidgetTester tester, Widget screen) async {
     await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -157,6 +204,59 @@ void main() {
     expect(saved.srsStage, 2);
     expect(saved.timesCorrect, 3);
     expect(saved.examples.single.sentence, word.examples.single.sentence);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('직접 추가 팝업은 취소 시 유지하고 빈 문장을 검증한 뒤 예문을 저장한다', (tester) async {
+    final word = await repo.upsertWord(exampleWord());
+    await open(tester, WordEditScreen(wordbookId: book.id, existing: word));
+    await tester.scrollUntilVisible(
+      find.text('직접 추가'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(WordEditScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await Scrollable.ensureVisible(
+      tester.element(find.text('직접 추가')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('직접 추가'));
+    await tester.pumpAndSettle();
+    expect(find.text('예문 직접 추가'), findsOneWidget);
+    await tester.enterText(field('영어 문장 *'), 'Discard this sentence.');
+    await tester.tap(find.text('취소'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard this sentence.'), findsNothing);
+
+    await tester.tap(find.text('직접 추가'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('추가'));
+    await tester.pumpAndSettle();
+    expect(find.text('영어 문장을 입력해 주세요.'), findsOneWidget);
+    await tester.enterText(field('영어 문장 *'), '  I run every morning.  ');
+    final translation = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: field('해석 (한국어)'),
+    );
+    await tester.enterText(translation, '  나는 매일 아침 달린다.  ');
+    await tester.tap(find.text('추가'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+    final saved = (await repo.getWords(book.id)).single;
+    expect(saved.examples.map((e) => e.sentence), [
+      'I run a business.',
+      'I run every morning.',
+    ]);
+    expect(saved.examples.last.translation, '나는 매일 아침 달린다.');
+    expect(saved.examples.last.source, isEmpty);
+    expect(saved.srsStage, word.srsStage);
     expect(tester.takeException(), isNull);
   });
 

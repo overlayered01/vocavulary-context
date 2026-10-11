@@ -136,6 +136,7 @@ class LocalRepository implements VocabRepository {
             wordbookId: word.wordbookId,
             group: word.group,
             term: word.term,
+            translationLanguage: word.translationLanguage,
             meanings: word.meanings,
             dictionarySourceTerms: word.dictionarySourceTerms,
             partOfSpeech: word.partOfSpeech,

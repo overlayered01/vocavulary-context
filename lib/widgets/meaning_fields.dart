@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/word.dart';
 import '../theme.dart';
 
@@ -28,12 +29,14 @@ class MeaningFields extends StatelessWidget {
   final List<TextEditingController> controllers;
   final VoidCallback onAdd;
   final ValueChanged<int> onRemove;
+  final bool required;
 
   const MeaningFields({
     super.key,
     required this.controllers,
     required this.onAdd,
     required this.onRemove,
+    this.required = true,
   });
 
   @override
@@ -51,11 +54,14 @@ class MeaningFields extends StatelessWidget {
               maxLines: 3,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                labelText: controllers.length == 1 ? '뜻 *' : '뜻 ${i + 1}',
-                hintText: '뜻을 하나씩 입력하세요',
+                labelText: controllers.length == 1
+                    ? (required
+                          ? context.l10n.meaningFieldsLabelRequired
+                          : context.l10n.meaningFieldsLabel)
+                    : context.l10n.meaningFieldsLabelNumbered(i + 1),
                 suffixIcon: controllers.length > 1
                     ? IconButton(
-                        tooltip: '뜻 ${i + 1} 삭제',
+                        tooltip: context.l10n.meaningFieldsRemove(i + 1),
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () => onRemove(i),
                       )
@@ -68,7 +74,7 @@ class MeaningFields extends StatelessWidget {
           child: TextButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('뜻 추가'),
+            label: Text(context.l10n.meaningFieldsAdd),
           ),
         ),
       ],
@@ -112,7 +118,7 @@ class _MeaningDialogState extends State<_MeaningDialog> {
   void _save() {
     final values = Word.normalizeMeanings(_controllers.map((c) => c.text));
     if (values.isEmpty) {
-      setState(() => _error = '뜻을 하나 이상 입력해 주세요.');
+      setState(() => _error = context.l10n.meaningFieldsEmptyError);
       return;
     }
     Navigator.pop(context, values);
@@ -121,7 +127,7 @@ class _MeaningDialogState extends State<_MeaningDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('뜻 수정'),
+      title: Text(context.l10n.meaningFieldsEditTitle),
       scrollable: true,
       content: SizedBox(
         width: 400,
@@ -141,16 +147,16 @@ class _MeaningDialogState extends State<_MeaningDialog> {
               },
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: AppColors.sub)),
+              Text(_error!, style: TextStyle(color: AppColors.sub)),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text(context.l10n.commonCancel),
         ),
-        ElevatedButton(onPressed: _save, child: const Text('저장')),
+        ElevatedButton(onPressed: _save, child: Text(context.l10n.commonSave)),
       ],
     );
   }

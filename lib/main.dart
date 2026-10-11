@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +22,11 @@ void _openReview() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 앱에 넣은 Outfit 글꼴(SIL OFL 1.1)을 오픈소스 라이선스 화면에 표시한다.
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString('assets/fonts/OFL-Outfit.txt');
+    yield LicenseEntryWithLineBreaks(const ['Outfit'], text);
+  });
 
   // Supabase 초기화 시도. URL/anon key 미설정이면 로컬 모드로 동작.
   bool cloudAvailable = false;
@@ -45,7 +52,7 @@ Future<void> main() async {
   final localRepo = LocalRepository();
   await localRepo.init();
 
-  // 알림 서비스 초기화 + 설정에 따라 예약.
+  // 알림 서비스 초기화. 예약은 단어를 읽을 수 있는 HomeShell에서 한다.
   final notifications = NotificationService();
   await notifications.init(onSelect: _openReview);
   if (settings.reminderEnabled) {
@@ -56,12 +63,6 @@ Future<void> main() async {
       await notifications.requestPermissions();
       await prefs.setBool(permAskedKey, true);
     }
-    await notifications.scheduleReminder(
-      hour: settings.reminderHour,
-      minute: settings.reminderMinute,
-      intervalDays: settings.reminderIntervalDays,
-      quiet: settings.quietWindow,
-    );
   }
   final launchedFromNotification = await notifications
       .launchedFromNotification();

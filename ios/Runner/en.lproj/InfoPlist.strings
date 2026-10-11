@@ -1,0 +1,4 @@
+CFBundleDisplayName = "Vocab with Examples";
+CFBundleName = "Vocab with Examples";
+NSCameraUsageDescription = "Take a photo of a page to pick example sentences for your words.";
+NSPhotoLibraryUsageDescription = "Choose a photo of a page to pick example sentences for your words.";

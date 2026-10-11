@@ -70,7 +70,7 @@ void main() {
     final result = DictionaryResult.fromMap('run', data);
     expect(result.senses.map((s) => s.meaning), ['달리다', 'Move in a race.']);
     expect(result.senses.first.partOfSpeechLabel, '동사');
-    expect(result.senses.last.korean, isEmpty);
+    expect(result.senses.last.translations, isEmpty);
   });
 
   test('단어를 URL 경로 하나로 인코딩하고 같은 조회 결과를 재사용한다', () async {

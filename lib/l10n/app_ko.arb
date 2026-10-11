@@ -1,0 +1,988 @@
+{
+  "@@locale": "ko",
+  "appTitle": "예문 단어장",
+  "commonCancel": "취소",
+  "commonSave": "저장",
+  "commonDelete": "삭제",
+  "commonAdd": "추가",
+  "commonClose": "닫기",
+  "commonRetry": "다시 시도",
+  "commonNext": "다음",
+  "commonEdit": "편집",
+  "commonConfirm": "확인",
+  "commonLoading": "불러오는 중",
+  "languageName": "{code, select, ko{한국어} ja{일본어} zh{중국어} es{스페인어} fr{프랑스어} de{독일어} pt{포르투갈어} vi{베트남어} th{태국어} id{인도네시아어} en{영어} other{{code}}}",
+  "@languageName": {
+    "description": "Name of a language, by ISO 639-1 code, written in the UI language.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "weekdayShort": "{day, select, d1{월} d2{화} d3{수} d4{목} d5{금} d6{토} d7{일} other{}}",
+  "@weekdayShort": {
+    "description": "Short weekday name. day is 'd1' (Monday) to 'd7' (Sunday).",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "wordAddWord": "단어 추가",
+  "@wordAddWord": {
+    "description": "Title of the add-word screens."
+  },
+  "wordEditWord": "단어 편집",
+  "@wordEditWord": {
+    "description": "Title of the edit-word screen and tooltip of the edit-word action."
+  },
+  "wordExamples": "예문",
+  "@wordExamples": {
+    "description": "Section label for example sentences."
+  },
+  "wordExampleSource": "출처: {source}",
+  "@wordExampleSource": {
+    "description": "Attribution of an example sentence. source is e.g. 'Tatoeba · CC BY 2.0 FR'.",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "wordPartOfSpeech": "{pos, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} article{관사} determiner{한정사} phrasalVerb{구동사} idiom{숙어} other{{value}}}",
+  "@wordPartOfSpeech": {
+    "description": "Display name of a part of speech. pos is an ASCII key mapped from the stored Korean value; value is the stored value shown as-is for unknown parts.",
+    "placeholders": {
+      "pos": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditTermRequired": "먼저 영어 단어를 입력해 주세요.",
+  "wordEditNoExamplesFound": "'{term}'에 사용할 예문을 찾지 못했습니다.",
+  "@wordEditNoExamplesFound": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditExamplesAlreadyAdded": "가져온 예문이 모두 이미 추가되어 있습니다.",
+  "wordEditExamplesAdded": "{count, plural, other{예문 {count}개를 추가했습니다.}}",
+  "@wordEditExamplesAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordEditExamplesFetchFailed": "예문을 가져오지 못했습니다: {error}",
+  "@wordEditExamplesFetchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditTermAndMeaningRequired": "단어와 뜻을 하나 이상 입력해 주세요.",
+  "wordEditSaveFailed": "저장하지 못했습니다. 다시 시도해 주세요.",
+  "wordEditSectionTerm": "단어 정보",
+  "wordEditSectionMeaning": "뜻과 발음",
+  "wordEditPhonetic": "발음기호",
+  "wordEditSearching": "검색 중",
+  "wordEditFetchExamples": "예문 가져오기",
+  "wordEditAddManually": "직접 추가",
+  "wordEditOptional": "선택",
+  "@wordEditOptional": {
+    "description": "Marks a form section as optional (not 'select')."
+  },
+  "wordEditExampleNumber": "예문 {index}",
+  "@wordEditExampleNumber": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "wordEditDeleteExample": "예문 삭제",
+  "wordEditSentence": "영어 문장",
+  "wordEditTranslationLabel": "해석 ({language})",
+  "@wordEditTranslationLabel": {
+    "description": "Label of the translation field. language is a localized language name.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditTermLabel": "단어 *",
+  "wordEditTermHint": "저장된 단어를 선택하면 뜻과 예문을 자동으로 채웁니다.",
+  "wordEditPartOfSpeech": "품사",
+  "wordEditPartOfSpeechNone": "선택 안 함",
+  "wordEditManualExampleTitle": "예문 직접 추가",
+  "wordEditSentenceRequiredLabel": "영어 문장 *",
+  "wordEditSentenceRequired": "영어 문장을 입력해 주세요.",
+  "wordEditPickerTitle": "'{term}' 예문",
+  "@wordEditPickerTitle": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditPickerDescription": "추가할 예문을 선택하세요. 번역이 없는 문장은 직접 입력할 수 있어요.",
+  "wordEditNoTranslation": "{language} 번역 없음",
+  "@wordEditNoTranslation": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "wordEditPickerAttribution": "예문 출처: Tatoeba · CC BY 2.0 FR",
+  "wordEditAddSelectedExamples": "선택한 예문 추가 ({count})",
+  "@wordEditAddSelectedExamples": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordCreateLoadFailed": "불러오지 못했습니다. 다시 시도해 주세요.",
+  "wordCreateSectionTitle": "단어 입력",
+  "wordCreateWordbook": "단어장",
+  "wordCreateNoWordbook": "단어장 없음",
+  "wordCreateReload": "다시 불러오기",
+  "wordCreateTermLabel": "단어",
+  "wordCreateLookingUp": "조회 중",
+  "wordCreateAutoInputSettings": "자동 입력 설정",
+  "wordCreateMeaningsOn": "뜻 켜짐",
+  "wordCreateMeaningsOff": "뜻 꺼짐",
+  "wordCreateExamplesOn": "예문 켜짐",
+  "wordCreateExamplesOff": "예문 꺼짐",
+  "wordCreateCollapse": "접기",
+  "wordCreateExpand": "펼치기",
+  "wordCreateAutoMeanings": "자동 뜻 입력",
+  "wordCreateAutoExamples": "자동 예문 입력",
+  "wordDetailDictionaryMeaningsAdded": "선택한 사전 뜻을 추가했어요.",
+  "wordDetailTitle": "단어 상세",
+  "wordDetailFavorite": "즐겨찾기",
+  "wordDetailUnfavorite": "즐겨찾기 해제",
+  "wordDetailAccentUs": "미국식",
+  "wordDetailAccentUk": "영국식",
+  "wordDetailMyMeanings": "내가 저장한 뜻",
+  "wordDetailListenExample": "예문 듣기",
+  "wordDetailGoogleTranslate": "구글 번역",
+  "meaningFieldsLabel": "뜻",
+  "meaningFieldsLabelRequired": "뜻 *",
+  "meaningFieldsLabelNumbered": "뜻 {index}",
+  "@meaningFieldsLabelNumbered": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "meaningFieldsRemove": "뜻 {index} 삭제",
+  "@meaningFieldsRemove": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "meaningFieldsAdd": "뜻 추가",
+  "meaningFieldsEmptyError": "뜻을 하나 이상 입력해 주세요.",
+  "meaningFieldsEditTitle": "뜻 수정",
+  "dictLookupAddFailed": "뜻을 추가하지 못했어요. 다시 시도해 주세요.",
+  "dictLookupButton": "사전 뜻 보기",
+  "dictLookupTitle": "{term} · 사전 뜻",
+  "@dictLookupTitle": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "dictLookupFallbackNotice": "{language} 뜻이 없는 항목은 영어 풀이로 표시해요.",
+  "@dictLookupFallbackNotice": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "dictLookupLoadFailed": "사전 뜻을 불러오지 못했어요.",
+  "dictLookupNoResults": "사전에 등록된 뜻을 찾지 못했어요.\n철자를 확인하거나 다른 사전에서 찾아보세요.",
+  "dictLookupAlreadyAdded": "추가됨",
+  "dictLookupAddSelected": "선택한 뜻 추가 ({count})",
+  "@dictLookupAddSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dictLookupLinkFailed": "사전 링크를 열지 못했어요.",
+  "dictLinksNaver": "네이버 영한",
+  "dictLinksOxford": "Oxford 영영",
+  "dictLinksOpenFailed": "사전을 열지 못했습니다. 다시 시도해 주세요.",
+  "dictLinksTitle": "사전에서 더 보기",
+  "wordbookError": "오류: {error}",
+  "@wordbookError": {
+    "description": "Generic error text shown when loading wordbooks or words fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "wordbookShareCode": "공유 코드",
+  "@wordbookShareCode": {
+    "description": "Label for a wordbook share code"
+  },
+  "wordbookDeleteTitle": "'{name}' 삭제",
+  "@wordbookDeleteTitle": {
+    "description": "Delete confirmation dialog title for a wordbook or word",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wordbooksTitle": "내 단어장",
+  "wordbooksNew": "새 단어장",
+  "wordbooksEmpty": "단어장이 없습니다.\n+ 버튼으로 추가하세요.",
+  "wordbooksCreate": "만들기",
+  "wordbooksNameLabel": "단어장 이름",
+  "wordbooksTagsLabel": "태그",
+  "wordbooksTagsHint": "토익, 일상회화 (쉼표로 구분)",
+  "wordbooksWordCount": "{count, plural, other{단어 {count}개}}",
+  "@wordbooksWordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordbooksMenu": "단어장 메뉴",
+  "wordbooksMenuRename": "이름·태그 편집",
+  "wordbooksShareSettings": "공유·공개 설정",
+  "wordbooksMenuDelete": "단어장 삭제",
+  "wordbooksEditTitle": "단어장 편집",
+  "wordbooksShareLoginRequired": "공유·공개는 로그인 후 사용할 수 있어요.",
+  "wordbooksVisibilityPrivate": "비공개",
+  "wordbooksVisibilityShared": "코드 공유",
+  "wordbooksVisibilityPublic": "공개",
+  "wordbooksVisibilityPrivateDesc": "나만 볼 수 있어요.",
+  "wordbooksVisibilitySharedDesc": "공유 코드를 아는 사람이 이 단어장을 복제할 수 있어요.",
+  "wordbooksVisibilityPublicDesc": "탐색 탭의 공개 목록에 올라가고 누구나 복제할 수 있어요.",
+  "wordbooksCopyCode": "코드 복사",
+  "wordbooksCodeCopied": "공유 코드를 복사했어요.",
+  "wordbooksDeleteWithWords": "{count, plural, other{단어장에 든 단어 {count}개도 함께 삭제됩니다.\n삭제한 단어장은 되돌릴 수 없어요.}}",
+  "@wordbooksDeleteWithWords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordbooksDeleteEmpty": "삭제한 단어장은 되돌릴 수 없어요.",
+  "wordbookDetailEmpty": "단어가 없습니다.\n단어 추가 버튼을 눌러보세요.",
+  "wordbookDetailWordDeleted": "'{term}' 삭제됨",
+  "@wordbookDetailWordDeleted": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "wordbookDetailUndo": "실행취소",
+  "wordbookDetailEditWholeWord": "단어 전체 편집",
+  "wordbookDetailEditWord": "단어 편집",
+  "wordbookDetailFavorite": "즐겨찾기",
+  "wordbookDetailUnfavorite": "즐겨찾기 해제",
+  "wordbookDetailEditMeaning": "뜻 수정",
+  "wordbookDetailEditAll": "전체 편집",
+  "wordbookDetailStatusFresh": "미학습",
+  "wordbookDetailStatusLearning": "학습중",
+  "wordbookDetailStatusCompleted": "완료",
+  "wordbookDetailDeleteWordConfirm": "이 단어를 삭제할까요?",
+  "wordbookDetailReleaseToDelete": "놓으면 삭제",
+  "exploreTitle": "탐색",
+  "exploreCodeNotFound": "코드에 해당하는 공유 단어장을 찾을 수 없어요.",
+  "exploreImportFailed": "가져오지 못했어요. 네트워크 상태를 확인해 주세요.",
+  "exploreCopyTitle": "'{title}' 복제",
+  "@exploreCopyTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreCopyConfirm": "{count, plural, other{단어 {count}개를 내 단어장으로 복제할까요?\n학습 상태는 처음부터 시작해요.}}",
+  "@exploreCopyConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exploreCopy": "복제",
+  "exploreImported": "'{title}' 단어장을 가져왔어요.",
+  "@exploreImported": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreLoggedOutHeadline": "새로운 단어장을\n둘러보세요",
+  "exploreLoginRequired": "공유 단어장 탐색은 로그인 후 사용할 수 있어요.",
+  "exploreGoToLogin": "로그인하기",
+  "exploreSupabaseRequired": "Supabase 연결 후 사용할 수 있습니다.",
+  "exploreImportByCode": "공유 코드로 가져오기",
+  "exploreCodeHint": "전달받은 코드를 붙여넣으세요",
+  "exploreImport": "가져오기",
+  "exploreCodeHelp": "단어장 메뉴의 공유·공개 설정에서 코드를 복사해 전달할 수 있어요.",
+  "explorePublicWordbooks": "공개 단어장",
+  "explorePublicLoadFailed": "공개 단어장을 불러오지 못했어요.\n아래로 당겨 새로고침해 보세요.",
+  "explorePublicEmpty": "아직 공개된 단어장이 없어요.",
+  "loginMigrateTitle": "로컬 단어장 가져오기",
+  "loginMigrateConfirm": "{count, plural, other{이 기기에서 만든 단어장 {count}개를 클라우드로 복사할까요?\n이미 클라우드에 있는 단어장은 건너뜁니다.}}",
+  "@loginMigrateConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loginLater": "나중에",
+  "loginImport": "가져오기",
+  "loginMigrated": "{count, plural, other{단어장 {count}개를 가져왔어요.}}",
+  "@loginMigrated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loginAlreadyInCloud": "모든 단어장이 이미 클라우드에 있어요.",
+  "loginErrorInvalidCredentials": "이메일 또는 비밀번호가 올바르지 않아요.",
+  "loginErrorUserExists": "이미 가입된 이메일이에요. 로그인해 주세요.",
+  "loginErrorWeakPassword": "비밀번호가 너무 짧아요. 6자 이상 입력해 주세요.",
+  "loginErrorEmailNotConfirmed": "이메일 인증이 필요해요. 받은 편지함을 확인해 주세요.",
+  "loginErrorRateLimit": "요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.",
+  "loginErrorGeneric": "로그인에 실패했어요. ({message})",
+  "@loginErrorGeneric": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "loginErrorNetwork": "요청을 처리하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.",
+  "loginTitle": "로그인",
+  "loginTagline": "예문으로 쉽게, 알람으로 꾸준히",
+  "loginEmail": "이메일",
+  "loginPassword": "비밀번호",
+  "loginSignUpWithEmail": "이메일로 회원가입",
+  "loginContinueWithGoogle": "구글로 계속하기",
+  "navHome": "홈",
+  "navWordbooks": "단어장",
+  "navSettings": "설정",
+  "settingsTitle": "설정",
+  "settingsTranslationSection": "뜻 · 예문 번역",
+  "settingsTranslationHelp": "자동은 기기 언어·국가에 맞춰 정해요. 새로 조회하는 단어 뜻과 예문에 제공되는 번역을 사용해요. 번역이 없는 뜻은 영어 풀이로 표시하고, 예문 해석은 비워둬요. 이미 저장한 내용은 자동으로 바뀌지 않아요.",
+  "settingsAppLanguageNote": "앱 화면도 이 언어로 표시돼요. 화면 번역이 없는 언어는 영어로 보여요.",
+  "settingsReviewMixSection": "복습 섞기 비율",
+  "settingsReviewMixLabel": "이미 외운 단어 다시 섞기",
+  "settingsReviewMixHelp": "복습 세트에 '학습완료' 단어를 이 비율만큼 섞어 출제해 장기 기억을 강화해요. (예: {total}문제 중 {mixed}문제)",
+  "@settingsReviewMixHelp": {
+    "description": "Explains the review mix ratio with an example: mixed completed words out of total questions.",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "mixed": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsReminderSection": "알람 · 복습",
+  "settingsReminderToggle": "복습 알림 받기",
+  "settingsReminderOff": "알림이 꺼져 있어요.",
+  "settingsReminderNoActive": "켜진 알람 구간이 없어요.",
+  "settingsReminderSummary": "매주 반복 · 일주일에 {count}회 알림이에요. 학습 중인 단어를 복습할 차례 순으로 담아요.",
+  "@settingsReminderSummary": {
+    "description": "Summary under the reminder list. count is the number of notifications per week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsReminderCapped": "기기의 예약 알림 제한({limit}개)을 넘어 늦은 시각 일부는 빠져요.",
+  "@settingsReminderCapped": {
+    "description": "Appended to the reminder summary when the device's scheduled notification limit is exceeded.",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsTtsSection": "발음 · TTS",
+  "settingsTtsDefault": "기본 발음",
+  "settingsTtsDefaultHelp": "단어와 예문을 읽을 기본 억양을 선택하세요.",
+  "settingsTtsUs": "미국식",
+  "settingsTtsUk": "영국식",
+  "settingsTtsQuality": "음질",
+  "settingsTtsQualityValue": "기기 TTS(무료)",
+  "settingsTatoebaCredit": "외부 예문: Tatoeba · CC BY 2.0 FR",
+  "reminderEveryDay": "매일",
+  "reminderNoWeekdays": "요일 없음",
+  "reminderWeekdays": "평일",
+  "reminderWeekends": "주말",
+  "reminderIntervalMinutes": "{minutes}분마다",
+  "@reminderIntervalMinutes": {
+    "description": "Reminder interval shorter than an hour.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderIntervalHours": "{hours}시간마다",
+  "@reminderIntervalHours": {
+    "description": "Reminder interval in whole hours.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderIntervalHoursMinutes": "{hours}시간 {minutes}분마다",
+  "@reminderIntervalHoursMinutes": {
+    "description": "Reminder interval in hours and minutes.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderAddSchedule": "알람 구간 추가",
+  "reminderEditSchedule": "알람 구간 편집",
+  "reminderStart": "시작",
+  "reminderEnd": "끝",
+  "reminderCrossesMidnight": "끝 시각이 시작보다 이르면 자정을 넘겨 다음 날 끝 시각까지 보내요.",
+  "reminderWeekdaysTitle": "알림 받을 요일",
+  "reminderWeekdaysRequired": "요일을 하나 이상 선택해 주세요.",
+  "reminderInterval": "알림 간격",
+  "reminderWordsPerAlert": "한 번에",
+  "reminderDecreaseWords": "단어 수 줄이기",
+  "reminderIncreaseWords": "단어 수 늘리기",
+  "reminderWordCount": "{count}개",
+  "@reminderWordCount": {
+    "description": "Number of words sent per reminder, shown between the -/+ buttons.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderWordCountLabel": "단어 {count}개",
+  "@reminderWordCountLabel": {
+    "description": "Words per reminder, shown in the reminder schedule tile.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderTimesPerDay": "하루 {count}회",
+  "@reminderTimesPerDay": {
+    "description": "Number of reminders per day, shown in the reminder schedule tile.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderPreview": "{days} {count}회 · {times}",
+  "@reminderPreview": {
+    "description": "Preview in the reminder editor, e.g. 'Weekdays 5 times · 09:00, 12:00, ...'.",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "times": {
+        "type": "String"
+      }
+    }
+  },
+  "translationLanguageLabel": "번역 언어",
+  "translationLanguageAuto": "자동 · {language}",
+  "@translationLanguageAuto": {
+    "description": "Dropdown item for automatic translation language; language is the detected language name.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationChannelName": "복습 알림",
+  "notificationChannelDescription": "설정한 요일·시간대에 보내는 단어 복습 알림",
+  "notificationTitleDefault": "복습 시간이에요",
+  "notificationTitleWords": "오늘의 단어 {count}개",
+  "@notificationTitleWords": {
+    "description": "Reminder notification title listing today's words.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationBodyDefault": "오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!",
+  "homeError": "오류: {error}",
+  "@homeError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "homeGreeting": "오늘도 외워볼까요?",
+  "homeTodayStudy": "오늘 학습",
+  "@homeTodayStudy": {
+    "description": "Home metric label: words studied today."
+  },
+  "homeTotalWords": "{count, plural, other{전체 {count}개}}",
+  "@homeTotalWords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAccuracy": "정답률",
+  "homeCompletedWords": "{count, plural, other{완료 {count}개}}",
+  "@homeCompletedWords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeWordOfTheDay": "오늘의 단어",
+  "homeQuickStart": "빠른 시작",
+  "homeQuickGuessWord": "예문 보고 단어 맞추기",
+  "homeQuickFillBlank": "예문 빈칸 채우기",
+  "homeQuickBrowseWordbooks": "단어장 둘러보기",
+  "homeCreateWordbookFirst": "먼저 단어장을 만들어 주세요.",
+  "homeEditWord": "단어 편집",
+  "homeListenWord": "단어 발음 듣기",
+  "homeSeeDetails": "자세히 보기",
+  "homeReviewAllDone": "오늘 복습을\n모두 마쳤어요!",
+  "homeReviewWaiting": "{count, plural, other{{count}개의 단어가\n기다리고 있어요}}",
+  "@homeReviewWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeCompletedBadge": "{count}\n완료",
+  "@homeCompletedBadge": {
+    "description": "Inside the progress ring: number of mastered words.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeReviewBreakdown": "신규/복습 {due} · 섞기 {mixed}",
+  "@homeReviewBreakdown": {
+    "description": "Due words vs. mastered words mixed back into the session.",
+    "placeholders": {
+      "due": {
+        "type": "int"
+      },
+      "mixed": {
+        "type": "int"
+      }
+    }
+  },
+  "homeStart": "시작하기",
+  "reviewNoExample": "(예문이 없습니다 — 뜻을 보고 단어를 입력하세요)",
+  "reviewTitle": "예문 복습",
+  "reviewEmpty": "오늘 꺼낼 카드 없음",
+  "reviewFillBlankTitle": "빈칸 채우기",
+  "reviewChoiceInstruction": "예문과 뜻을 보고 알맞은 단어를 고르세요",
+  "reviewInputInstruction": "예문과 뜻을 보고 단어를 입력하세요",
+  "reviewOtherExample": "다른 예문  {current}/{total}",
+  "@reviewOtherExample": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewDontKnow": "모름",
+  "reviewInputHint": "단어 입력",
+  "reviewHint": "힌트: {hint}",
+  "@reviewHint": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewCheckAnswer": "정답 확인",
+  "reviewCorrect": "정답입니다",
+  "reviewWrongAnswerIs": "아쉬워요. 정답은",
+  "@reviewWrongAnswerIs": {
+    "description": "Followed by the correct word on the next line."
+  },
+  "reviewSource": "출처: {source}",
+  "@reviewSource": {
+    "description": "source may include the license, e.g. \"Tatoeba · CC BY 2.0 FR\".",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewMixedNotice": "복습 섞기로 다시 나온 단어예요 (학습완료)",
+  "reviewSummaryTitle": "복습 완료",
+  "reviewSummaryDone": "복습을 완료했어요",
+  "reviewSummaryScore": "{total}문제 중 {correct}개 정답",
+  "@reviewSummaryScore": {
+    "placeholders": {
+      "correct": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewGoHome": "홈으로",
+  "dictionaryRateLimited": "사전 조회가 잠시 제한됐어요. 잠시 후 다시 시도해 주세요.",
+  "dictionaryConnectionFailed": "사전에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  "dictionaryTimeout": "사전 응답이 늦어지고 있어요. 다시 시도해 주세요.",
+  "dictionaryLoadFailed": "사전 뜻을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.",
+  "draftDictionaryUnavailable": "사전에 연결하지 못했어요. 뜻을 직접 입력하거나 다시 조회해 주세요.",
+  "draftMeaningNotFound": "뜻을 찾지 못했어요. 직접 입력하거나 사전에서 찾아보세요.",
+  "draftNoTranslationUsedEnglish": "사전에 {language} 뜻이 없어 영어 풀이로 채웠어요. 번역 언어는 설정에서 바꿀 수 있어요.",
+  "@draftNoTranslationUsedEnglish": {
+    "description": "language is a localized language name, e.g. 프랑스어 / French.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "draftSomeUsedEnglish": "{language} 뜻이 없는 항목은 영어 풀이로 채웠어요.",
+  "@draftSomeUsedEnglish": {
+    "description": "language is a localized language name.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "draftExamplesRetry": "예문은 아래의 ‘예문 가져오기’로 다시 불러올 수 있어요.",
+  "@draftExamplesRetry": {
+    "description": "Refers to the fetch-examples button label on the word form."
+  },
+  "speakListen": "발음 듣기",
+  "@speakListen": {
+    "description": "Default tooltip of the speaker button."
+  },
+  "speakListenExample": "예문 듣기",
+  "adPreview": "광고 미리보기",
+  "addWordButton": "단어 추가",
+  "wordCreateExampleTranslations": "예문 해석 포함",
+  "wordCreateNoExampleTranslations": "해석 없음",
+  "@wordCreateNoExampleTranslations": {
+    "description": "Collapsed status chip: auto examples are added without translations."
+  },
+  "homeRemainingCards": "남은 카드",
+  "homeTodayCards": "오늘 {count}장",
+  "@homeTodayCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNewReviewBreakdown": "신규 {fresh} · 복습 {review}",
+  "@homeNewReviewBreakdown": {
+    "placeholders": {
+      "fresh": {
+        "type": "int"
+      },
+      "review": {
+        "type": "int"
+      }
+    }
+  },
+  "homeStartButton": "시작",
+  "homeNoCardsToday": "오늘 꺼낼 카드 없음",
+  "reviewRemaining": "남은 {count}",
+  "@reviewRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewKeep": "남기기",
+  "reviewDiscard": "버리기",
+  "reviewDoneTitle": "오늘 {count}장 끝",
+  "@reviewDoneTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordbooksCardsLeft": "장 남음 · 전체 {count}",
+  "@wordbooksCardsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordbookCardsLeftSuffix": "장 남음",
+  "wordbookDetailAllDiscarded": "남은 카드 없음",
+  "wordbookDetailDiscarded": "'{term}' 버림",
+  "@wordbookDetailDiscarded": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "wordbookDetailReleaseToDiscard": "놓으면 버림",
+  "wordbookAddWordShort": "단어",
+  "discardedTitle": "버린 카드",
+  "discardedEmpty": "버린 카드 없음",
+  "discardedRestore": "다시 넣기",
+  "wordAddMeaningSelect": "뜻 선택",
+  "wordAddManualInput": "뜻 직접 입력",
+  "wordAddMeaningLabel": "뜻",
+  "wordAddExamplesOf": "{pos} 예문",
+  "@wordAddExamplesOf": {
+    "placeholders": {
+      "pos": {
+        "type": "String"
+      }
+    }
+  },
+  "wordAddSelectedCount": "{count}개 선택",
+  "@wordAddSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordAddWriteExample": "예문 직접 쓰기",
+  "wordAddSave": "등록",
+  "wordAddAlreadyInDeck": "이미 덱에 있음",
+  "wordAddNoResults": "사전에 없음",
+  "wordAddLookupFailed": "사전 연결 실패",
+  "wordAddAutoInput": "자동 입력",
+  "wordAddAutoOff": "자동 입력 꺼짐",
+  "wordAddExampleTranslation": "예문 해석",
+  "wordAddNoExamples": "예문 후보가 없어요. 비워 두고 등록해도 돼요.",
+  "settingsTheme": "테마",
+  "themeSlate": "슬레이트",
+  "themeNavy": "네이비",
+  "themeBrown": "브라운",
+  "themePlum": "플럼",
+  "themeCharcoal": "차콜",
+  "themeCustom": "직접",
+  "themeCustomTitle": "테마 직접 지정",
+  "themeBase": "바탕",
+  "themePoint": "포인트",
+  "themeAutoText": "글자 색은 자동으로 맞춤",
+  "themeApply": "적용",
+  "themeReset": "초기화",
+  "settingsLanguageSection": "언어",
+  "settingsLanguageRow": "뜻 · 예문 · 앱 언어",
+  "settingsFollowDevice": "기기 설정 따름",
+  "settingsReviewSection": "복습",
+  "settingsSessionSize": "한 번에 꺼낼 카드",
+  "settingsMixLabel": "버린 카드 다시 섞기",
+  "settingsMixExample": "{total}장 중 {mixed}장",
+  "@settingsMixExample": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "mixed": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWordAddSection": "단어 추가",
+  "settingsNotificationsSection": "알림",
+  "settingsReminderMaster": "복습 알림",
+  "settingsAddSlot": "알림 구간",
+  "settingsWeeklyCount": "일주일 {count}회",
+  "@settingsWeeklyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderCardCount": "{count}장",
+  "@reminderCardCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsPronunciationSection": "발음",
+  "settingsAccent": "억양",
+  "settingsVoice": "목소리",
+  "settingsVoiceDefault": "기본",
+  "settingsSpeed": "속도",
+  "settingsSpeedSlow": "느리게",
+  "settingsSpeedNormal": "보통",
+  "settingsSpeedFast": "빠르게",
+  "settingsRecorded": "단어는 사람 녹음으로",
+  "settingsRecordedHelp": "녹음이 없으면 목소리로 읽음",
+  "settingsAbout": "정보 · 출처",
+  "aboutDataSources": "데이터 출처",
+  "aboutUseMeanings": "뜻 · 사전 예문",
+  "aboutUseOnline": "온라인 사전",
+  "aboutUseExamples": "번역 예문",
+  "aboutUseRecordings": "단어 발음 녹음",
+  "aboutApp": "앱",
+  "aboutVersion": "버전",
+  "aboutLicenses": "오픈소스 라이선스",
+  "reminderPerDayTotal": "하루 {times}회 · {cards}장",
+  "@reminderPerDayTotal": {
+    "placeholders": {
+      "times": {
+        "type": "int"
+      },
+      "cards": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsPackDownloading": "예문 해석 받는 중 · {size}",
+  "@settingsPackDownloading": {
+    "description": "Status of the per-language example translation download. size is e.g. '1.7MB'.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPackReady": "예문 해석 받음 · {size}",
+  "@settingsPackReady": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPackFailed": "예문 해석을 받지 못했어요",
+  "settingsPackRetry": "다시 시도",
+  "settingsExampleDataSection": "예문 데이터",
+  "settingsExampleData": "예문 해석 받기",
+  "settingsPackNone": "받지 않음",
+  "settingsPackNotNeeded": "영어는 해석이 필요하지 않아요",
+  "settingsPackVersion": "받음 · v{version} · {size}",
+  "@settingsPackVersion": {
+    "description": "Installed example translation data. version is a number, size e.g. '1.7MB'.",
+    "placeholders": {
+      "version": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsPackUpdate": "업데이트 확인",
+  "settingsPackUpToDate": "최신 버전이에요 (v{version})",
+  "@settingsPackUpToDate": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsPackUpdated": "v{version} 버전으로 업데이트했어요",
+  "@settingsPackUpdated": {
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "examplePromptTitle": "예문 해석을 받을까요?",
+  "examplePromptBody": "영어 예문의 {language} 해석을 내려받아 기기에 둡니다{size}. 설정의 예문 데이터에서 언제든 바꿀 수 있어요.",
+  "@examplePromptBody": {
+    "description": "First-run question. size is empty or e.g. ' (1.7MB)' including the leading space.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "examplePromptAccept": "받기",
+  "examplePromptDecline": "받지 않기",
+  "wordAddPosLabel": "품사",
+  "wordAddPosUnknown": "품사 모름",
+  "homeQuickGuessFromMeaning": "뜻 보고 단어 맞추기",
+  "wordFoundExample": "찾은 예문",
+  "wordAddFoundExample": "예문 넣기",
+  "wordbookFoundExamples": "예문 {count}개 찾음",
+  "@wordbookFoundExamples": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wordAddScanExample": "사진에서 예문 가져오기",
+  "wordScanCamera": "카메라로 찍기",
+  "wordScanGallery": "앨범에서 고르기",
+  "wordScanPick": "가져올 문장 고르기",
+  "wordScanFailed": "사진의 글자를 읽지 못했어요",
+  "wordScanNoSentence": "사진에서 '{term}'이(가) 들어간 문장을 찾지 못했어요",
+  "@wordScanNoSentence": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "exampleSourcePhoto": "내 사진"
+}

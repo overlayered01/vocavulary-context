@@ -1,191 +1,346 @@
+import '../models/translation_language.dart';
 import '../models/word.dart';
 import 'dictionary_service.dart';
 import 'example_source_service.dart';
+import 'offline_examples.dart';
 
-class WordDraft {
-  final Word word;
-  final String notice;
-  final Future<List<Example>>? pendingExamples;
-  const WordDraft({
-    required this.word,
-    required this.notice,
-    this.pendingExamples,
+/// 사전에서 찾은 한 품사의 뜻과 예문. 단어 카드 한 장은 품사 하나다.
+class SenseGroup {
+  /// 저장용 품사 값 (한국어 품사명, 예: '동사'). 모르면 빈 문자열.
+  final String partOfSpeech;
+  final List<String> meanings;
+
+  /// 이 품사의 사전 예문. 번역이 있으면 함께 담긴다.
+  final List<Example> examples;
+
+  /// 뜻별 사전 출처 (Word.dictionarySourceTerms 형식).
+  final Map<String, String> sourceTerms;
+
+  /// 뜻이 번역 언어가 아니라 영어 풀이인지.
+  final bool englishOnly;
+
+  const SenseGroup({
+    required this.partOfSpeech,
+    required this.meanings,
+    this.examples = const [],
+    this.sourceTerms = const {},
+    this.englishOnly = false,
   });
 }
 
-/// Builds an editable draft; never writes to the repository.
+class WordLookup {
+  final String term;
+  final String phonetic;
+  final List<SenseGroup> groups;
+
+  /// 사전 연결에 실패했는지 (결과 없음과 구분).
+  final bool failed;
+  const WordLookup({
+    required this.term,
+    this.phonetic = '',
+    this.groups = const [],
+    this.failed = false,
+  });
+}
+
+/// 단어 추가 화면의 사전 조회와 예문 후보를 만든다. 저장은 하지 않는다.
 class WordDraftService {
   final DictionaryService dictionary;
   final ExampleSourceService examples;
-  const WordDraftService({required this.dictionary, required this.examples});
 
-  Future<WordDraft> create({
-    required String term,
-    required String wordbookId,
-    required List<Word> savedWords,
-  }) async {
+  /// 품사를 미리 붙여 둔 내장 Tatoeba 예문. 없으면 온라인 예문만 쓴다.
+  final OfflineExamples? offline;
+  final TranslationLanguage translationLanguage;
+
+  const WordDraftService({
+    required this.dictionary,
+    required this.examples,
+    this.offline,
+    this.translationLanguage = TranslationLanguage.korean,
+  });
+
+  static const _uncommon = {
+    'archaic',
+    'obsolete',
+    'dated',
+    'rare',
+    'historical',
+    'nonstandard',
+    'slang',
+    'offensive',
+    'vulgar',
+    'derogatory',
+  };
+
+  /// 뜻을 품사별로 묶는다. 번역 언어 풀이가 있는 품사는 번역만 쓰고,
+  /// 번역이 하나도 없는 품사만 영어 풀이로 채운다.
+  Future<WordLookup> lookup(String term) async {
     final query = term.trim();
-    if (query.isEmpty) throw ArgumentError.value(term, 'term');
-    final matches =
-        savedWords
-            .where(
-              (word) => word.term.trim().toLowerCase() == query.toLowerCase(),
-            )
-            .toList()
-          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    final saved = matches.firstOrNull;
-    final needsDictionary =
-        saved == null ||
-        saved.meanings.isEmpty ||
-        saved.partOfSpeech.isEmpty ||
-        saved.phonetic.isEmpty;
-    final needsExamples = (saved?.examples.length ?? 0) < 2;
-    DictionaryResult? result;
-    var fetchedExamples = const <Example>[];
-    var dictionaryFailed = false;
-    var examplesFailed = false;
-    var examplesReady = !needsExamples;
-
-    // Fetch both sources concurrently, but never hold up the draft for Tatoeba.
-    final exampleRequest = () async {
-      if (needsExamples) {
-        try {
-          fetchedExamples = await examples
-              .fetchExamples(query, limit: 2)
-              .timeout(const Duration(seconds: 12));
-        } catch (_) {
-          examplesFailed = true;
-        }
-      }
-      examplesReady = true;
-      return fetchedExamples;
-    }();
-    if (needsDictionary) {
-      try {
-        result = await dictionary.lookup(query);
-      } catch (_) {
-        dictionaryFailed = true;
-      }
+    if (query.isEmpty) return WordLookup(term: query);
+    DictionaryResult result;
+    try {
+      result = await dictionary.lookup(
+        query,
+        translationLanguage: translationLanguage,
+        remoteTimeout: const Duration(seconds: 3),
+      );
+    } catch (_) {
+      return WordLookup(term: query, failed: true);
     }
-
-    const uncommon = {
-      'archaic',
-      'obsolete',
-      'dated',
-      'rare',
-      'historical',
-      'nonstandard',
-      'slang',
-      'offensive',
-      'vulgar',
-      'derogatory',
-    };
-    final available = result?.senses ?? const <DictionarySense>[];
-    final usual = available
-        .where((sense) => !sense.tags.any(uncommon.contains))
+    final usual = result.senses
+        .where((sense) => !sense.tags.any(_uncommon.contains))
         .toList();
-    final eligible = usual.isEmpty ? available : usual;
-    // Prefer separate main senses before filling in closely related subsenses.
-    final candidates = [
-      ...eligible.where((sense) => sense.depth == 0),
-      ...eligible.where((sense) => sense.depth > 0),
-    ];
-    // One part-of-speech field applies to the whole word in the current model.
-    final savedPart = saved?.partOfSpeech ?? '';
-    final preferredPart = savedPart.isNotEmpty
-        ? savedPart
-        : (candidates.firstOrNull?.partOfSpeechLabel ?? '');
-    final selected = <DictionarySense>[];
-    final seenMeanings = <String>{};
-    for (final sense in candidates) {
-      if (sense.partOfSpeechLabel == preferredPart &&
-          seenMeanings.add(sense.meaning)) {
-        selected.add(sense);
-        if (selected.length == 3) break;
-      }
-    }
-    final usesDictionaryMeanings =
-        (saved?.meanings.isEmpty ?? true) && selected.isNotEmpty;
-    final meanings = usesDictionaryMeanings
-        ? selected.map((sense) => sense.meaning).toList()
-        : (saved?.meanings ?? const <String>[]);
-    final phonetic = (saved?.phonetic.isNotEmpty ?? false)
-        ? saved!.phonetic
-        : (result?.phonetic ?? '');
+    final senses = usual.isEmpty ? result.senses : usual;
 
-    final dictionaryExamples = [
-      for (final sense in selected)
-        for (final sentence in sense.examples)
+    final order = <String>[];
+    final byPart = <String, List<DictionarySense>>{};
+    for (final sense in senses) {
+      final part = sense.partOfSpeechLabel;
+      if (!byPart.containsKey(part)) order.add(part);
+      byPart.putIfAbsent(part, () => []).add(sense);
+    }
+
+    final groups = <SenseGroup>[];
+    for (final part in order) {
+      final all = byPart[part]!;
+      final translated = all.where((s) => s.translations.isNotEmpty).toList();
+      final useTranslated =
+          translationLanguage.hasTranslations && translated.isNotEmpty;
+      final pool = useTranslated ? translated : all;
+      final ordered = [
+        ...pool.where((s) => s.depth == 0),
+        ...pool.where((s) => s.depth > 0),
+      ];
+      final meanings = <String>[];
+      final sourceTerms = <String, String>{};
+      for (final sense in ordered) {
+        final meaning = sense.meaning.trim();
+        if (meaning.isEmpty || meanings.contains(meaning)) continue;
+        meanings.add(meaning);
+        sourceTerms[meaning] = sense.sourceTerm(query);
+        if (meanings.length == 6) break;
+      }
+      if (meanings.isEmpty) continue;
+      groups.add(
+        SenseGroup(
+          partOfSpeech: part,
+          meanings: meanings,
+          examples: _dictionaryExamples(all, query),
+          sourceTerms: sourceTerms,
+          englishOnly: translationLanguage.hasTranslations && !useTranslated,
+        ),
+      );
+    }
+    return WordLookup(
+      term: query,
+      phonetic: result.phonetic,
+      groups: groups,
+    );
+  }
+
+  /// 같은 품사 뜻들에 붙은 사전 예문. 번역 있는 예문을 앞에 둔다.
+  List<Example> _dictionaryExamples(List<DictionarySense> senses, String term) {
+    final seen = <String>{};
+    final found = <Example>[];
+    for (final sense in senses) {
+      for (final (index, sentence) in sense.examples.indexed) {
+        final text = sentence.trim();
+        // 'take prisoners' 같은 짧은 구절은 예문으로 쓰기 어렵다.
+        if (text.split(RegExp(r'\s+')).length < 4) continue;
+        if (!seen.add(text.toLowerCase())) continue;
+        final translation = index < sense.exampleTranslations.length
+            ? sense.exampleTranslations[index].trim()
+            : '';
+        found.add(
           Example(
-            sentence: sentence,
+            sentence: text,
+            translation: translation,
             source: 'Wiktionary',
-            sourceId: query,
+            sourceId: sense.sourceTerm(term),
             license: 'CC BY-SA 4.0',
           ),
-    ];
-    List<Example> combineExamples(List<Example> fetched) {
-      final combined = [...?saved?.examples];
-      final exampleTexts = combined
-          .map((e) => e.sentence.trim().toLowerCase())
-          .toSet();
-      for (final example in [
-        ...fetched.where((e) => e.translation.isNotEmpty),
-        ...dictionaryExamples,
-        ...fetched.where((e) => e.translation.isEmpty),
-      ]) {
-        if (combined.length >= 2) break;
-        if (exampleTexts.add(example.sentence.trim().toLowerCase())) {
-          combined.add(example);
-        }
+        );
       }
-      return combined;
     }
-
-    final draftExamples = combineExamples(fetchedExamples);
-    final sourceTerms = {...?saved?.dictionarySourceTerms};
-    if (usesDictionaryMeanings ||
-        ((saved?.phonetic.isEmpty ?? true) && phonetic.isNotEmpty) ||
-        draftExamples.any(
-          (e) => e.source == 'Wiktionary' && e.sourceId == query,
-        )) {
-      sourceTerms.add(query);
-    }
-
-    final notices = <String>[];
-    if (meanings.isEmpty) {
-      notices.add(
-        dictionaryFailed
-            ? '사전에 연결하지 못했어요. 뜻을 직접 입력하거나 다시 조회해 주세요.'
-            : '뜻을 찾지 못했어요. 직접 입력하거나 사전에서 찾아보세요.',
-      );
-    } else if (usesDictionaryMeanings &&
-        selected.every((s) => s.korean.isEmpty)) {
-      notices.add('한국어 뜻이 없어 영어 풀이로 채웠어요.');
-    }
-    if (draftExamples.isEmpty && examplesFailed) {
-      notices.add('예문은 아래의 ‘예문 가져오기’로 다시 불러올 수 있어요.');
-    }
-    final now = DateTime.now();
-    return WordDraft(
-      word: Word(
-        id: '',
-        wordbookId: wordbookId,
-        term: query,
-        meanings: meanings,
-        dictionarySourceTerms: sourceTerms.toList(),
-        partOfSpeech: savedPart.isNotEmpty
-            ? savedPart
-            : (selected.firstOrNull?.partOfSpeechLabel ?? ''),
-        phonetic: phonetic,
-        examples: draftExamples,
-        imageUrl: saved?.imageUrl ?? '',
-        createdAt: now,
-        updatedAt: now,
+    found.sort(
+      (a, b) => (a.translation.isEmpty ? 1 : 0).compareTo(
+        b.translation.isEmpty ? 1 : 0,
       ),
-      notice: notices.isEmpty ? '자동으로 채웠어요. 확인한 뒤 저장해 주세요.' : notices.join(' '),
-      pendingExamples: examplesReady
-          ? null
-          : exampleRequest.then(combineExamples),
+    );
+    return found.take(6).toList();
+  }
+
+  /// Tatoeba 예문 중 [partOfSpeech]로 쓰인 문장만 돌려준다. 사전 예문 다음 후보로 쓴다.
+  ///
+  /// 내장 예문은 빌드할 때 품사를 붙여 두어서 정확하다. 3개가 안 되거나
+  /// 해석을 원하는데 해석 있는 문장이 없으면 온라인 Tatoeba에서 더 찾는다.
+  /// 온라인 결과에는 품사 정보가 없어서 앞뒤 단어로 거른다.
+  Future<List<Example>> tatoebaExamples(
+    String term,
+    String partOfSpeech, {
+    bool withTranslations = true,
+  }) async {
+    final language = withTranslations && translationLanguage.hasTranslations
+        ? translationLanguage
+        : TranslationLanguage.english;
+    final bundled =
+        await offline?.find(
+          term,
+          partOfSpeech,
+          translationLanguage: language,
+        ) ??
+        const <Example>[];
+    final wantsTranslation = language.hasTranslations;
+    if (bundled.length >= 3 &&
+        (!wantsTranslation || bundled.any((e) => e.translation.isNotEmpty))) {
+      return bundled;
+    }
+    List<Example> fetched;
+    try {
+      fetched = await examples.fetchExamples(
+        term,
+        limit: 8,
+        translationLanguage: language,
+      );
+    } catch (_) {
+      if (bundled.isNotEmpty) return bundled;
+      rethrow;
+    }
+    final seen = {for (final e in bundled) e.sentence.toLowerCase()};
+    final merged = [
+      ...bundled,
+      for (final example in fetched)
+        if (matchesPartOfSpeech(example.sentence, term, partOfSpeech) &&
+            seen.add(example.sentence.toLowerCase()))
+          example,
+    ];
+    if (!wantsTranslation) return merged;
+    // 해석이 있는 문장을 앞으로 (같은 조건에서는 내장 예문이 먼저).
+    return [
+      for (final e in merged)
+        if (e.translation.isNotEmpty) e,
+      for (final e in merged)
+        if (e.translation.isEmpty) e,
+    ];
+  }
+
+  static const _determiners = {
+    'a',
+    'an',
+    'the',
+    'my',
+    'your',
+    'his',
+    'her',
+    'its',
+    'our',
+    'their',
+    'this',
+    'that',
+    'these',
+    'those',
+    'some',
+    'any',
+    'no',
+    'every',
+    'each',
+  };
+  static const _verbSignals = {
+    'to',
+    'i',
+    'you',
+    'he',
+    'she',
+    'we',
+    'they',
+    'will',
+    'would',
+    'can',
+    'could',
+    'should',
+    'must',
+    'may',
+    'might',
+    'do',
+    'does',
+    'did',
+    "don't",
+    "doesn't",
+    "didn't",
+    "won't",
+    "can't",
+    'not',
+  };
+
+  /// 문장 속 단어가 [partOfSpeech]로 쓰였는지 가볍게 추정한다.
+  /// 판단할 수 없으면 true.
+  static bool matchesPartOfSpeech(
+    String sentence,
+    String term,
+    String partOfSpeech,
+  ) {
+    final match = RegExp(
+      '\\b${RegExp.escape(term.trim())}\\w*',
+      caseSensitive: false,
+    ).firstMatch(sentence);
+    if (match == null) return true;
+    final before = sentence.substring(0, match.start).trim().split(
+      RegExp(r'\s+'),
+    );
+    String word(int fromEnd) => before.length < fromEnd || before.first.isEmpty
+        ? ''
+        : before[before.length - fromEnd].toLowerCase().replaceAll(
+            RegExp(r'[^a-z\x27]'),
+            '',
+          );
+    final previous = word(1);
+    switch (partOfSpeech) {
+      case '동사':
+        // 'a run', 'a good run'처럼 한정사 뒤(형용사 하나 건너)는 명사로 본다.
+        return !_determiners.contains(previous) &&
+            !_determiners.contains(word(2)) &&
+            !previous.endsWith("'s");
+      case '명사':
+        return !_verbSignals.contains(previous);
+      default:
+        return true;
+    }
+  }
+
+  /// 저장할 카드. 같은 단어라도 품사가 다르면 다른 카드다.
+  Word buildWord({
+    required String wordbookId,
+    required String term,
+    required String partOfSpeech,
+    required List<String> meanings,
+    required List<Example> examples,
+    String phonetic = '',
+    Iterable<String> sourceTerms = const [],
+    bool withTranslations = true,
+  }) {
+    final now = DateTime.now();
+    return Word(
+      id: '',
+      wordbookId: wordbookId,
+      term: term.trim(),
+      translationLanguage: translationLanguage.code,
+      meanings: Word.normalizeMeanings(meanings),
+      dictionarySourceTerms: {...sourceTerms}.toList(),
+      partOfSpeech: partOfSpeech,
+      phonetic: phonetic,
+      examples: [
+        for (final e in examples)
+          withTranslations
+              ? e
+              : Example(
+                  sentence: e.sentence,
+                  source: e.source,
+                  sourceId: e.sourceId,
+                  license: e.license,
+                ),
+      ],
+      createdAt: now,
+      updatedAt: now,
     );
   }
 }

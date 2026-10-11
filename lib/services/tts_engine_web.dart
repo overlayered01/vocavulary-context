@@ -38,30 +38,34 @@ class TtsEngine {
     String text, {
     required String locale,
     required bool isSentence,
+    String voice = '',
+    double speed = 1,
   }) {
     final utterance = _SpeechSynthesisUtterance()
       ..text = text
       ..lang = locale
       // Web Speech API의 기본 속도는 1.0이다. 기존 0.45는 지나치게 느려
       // 문장 억양이 끊겨 들리므로 예문은 실제 회화에 가까운 속도로 읽는다.
-      ..rate = isSentence ? 0.92 : 0.78
+      ..rate = (isSentence ? 0.92 : 0.78) * speed
       ..pitch = 1.0;
 
     final normalizedLocale = _normalizeLocale(locale);
     final voices = _speechSynthesis.getVoices().toDart;
     _SpeechSynthesisVoice? preferredVoice;
     var preferredScore = -1;
-    for (final voice in voices) {
-      final voiceLocale = _normalizeLocale(voice.lang);
+    for (final candidate in voices) {
+      final voiceLocale = _normalizeLocale(candidate.lang);
       if (!voiceLocale.startsWith(normalizedLocale.split('-').first)) continue;
 
       var score = voiceLocale == normalizedLocale ? 100 : 50;
-      final name = voice.name.toLowerCase();
+      // 사용자가 고른 목소리가 있으면 그것을 쓴다.
+      if (voice.isNotEmpty && candidate.name == voice) score += 1000;
+      final name = candidate.name.toLowerCase();
       if (name.contains('natural') || name.contains('neural')) score += 40;
       if (name.contains('premium') || name.contains('enhanced')) score += 30;
       if (name.contains('google') || name.contains('microsoft')) score += 20;
       if (score > preferredScore) {
-        preferredVoice = voice;
+        preferredVoice = candidate;
         preferredScore = score;
       }
     }
@@ -75,6 +79,16 @@ class TtsEngine {
     _speechSynthesis.cancel();
     _speechSynthesis.speak(utterance);
     return Future<void>.value();
+  }
+
+  /// 브라우저가 가진 [locale] 언어 목소리 이름.
+  Future<List<String>> voices(String locale) {
+    final language = locale.split('-').first.toLowerCase();
+    final names = <String>{
+      for (final voice in _speechSynthesis.getVoices().toDart)
+        if (_normalizeLocale(voice.lang).startsWith(language)) voice.name,
+    };
+    return Future.value(names.toList()..sort());
   }
 
   Future<void> stop() {

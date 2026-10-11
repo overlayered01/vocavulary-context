@@ -1,13 +1,16 @@
 /// 단어 학습 상태 (예문 복습 + SRS).
 enum LearnStatus { fresh, learning, completed }
 
-/// 예문 한 개 (영어 문장 + 한글 해석).
+/// 예문 한 개 (영어 문장 + 선택 언어 해석).
 class Example {
   final String sentence;
   final String translation;
   final String source;
   final String sourceId;
   final String license;
+
+  /// 사용자가 찍은 사진에서 가져온 예문의 [source]. 공개 단어장에서는 빠진다.
+  static const photoSource = 'photo';
 
   const Example({
     required this.sentence,
@@ -42,6 +45,7 @@ class Word {
   /// 단어장 내 소분류 그룹명. 빈 문자열이면 '그룹 없음'.
   final String group;
   final String term;
+  final String translationLanguage;
   final String _legacyMeaning;
   final List<String> _meanings;
 
@@ -92,6 +96,7 @@ class Word {
     required this.wordbookId,
     this.group = '',
     required this.term,
+    this.translationLanguage = 'ko',
     String meaning = '',
     List<String> meanings = const [],
     this.dictionarySourceTerms = const [],
@@ -124,6 +129,7 @@ class Word {
   Word copyWith({
     String? group,
     String? term,
+    String? translationLanguage,
     String? meaning,
     List<String>? meanings,
     List<String>? dictionarySourceTerms,
@@ -145,6 +151,7 @@ class Word {
       wordbookId: wordbookId,
       group: group ?? this.group,
       term: term ?? this.term,
+      translationLanguage: translationLanguage ?? this.translationLanguage,
       meanings: meanings ?? (meaning == null ? this.meanings : [meaning]),
       dictionarySourceTerms:
           dictionarySourceTerms ?? this.dictionarySourceTerms,
@@ -169,6 +176,7 @@ class Word {
     'wordbookId': wordbookId,
     'group': group,
     'term': term,
+    'translationLanguage': translationLanguage,
     'meaning': meaning,
     'meanings': meanings,
     'dictionarySourceTerms': dictionarySourceTerms,
@@ -195,6 +203,7 @@ class Word {
       wordbookId: (m['wordbookId'] ?? '') as String,
       group: (m['group'] ?? '') as String,
       term: (m['term'] ?? '') as String,
+      translationLanguage: (m['translationLanguage'] ?? 'ko') as String,
       meaning: (m['meaning'] ?? '') as String,
       meanings: m['meanings'] is List
           ? normalizeMeanings((m['meanings'] as List).whereType<String>())

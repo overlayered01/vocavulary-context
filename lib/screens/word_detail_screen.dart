@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
+import '../models/translation_language.dart';
 import '../models/word.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../widgets/speak_button.dart';
-import '../widgets/word_image.dart';
 import '../widgets/meaning_fields.dart';
+import '../widgets/panel.dart';
 import '../widgets/dictionary_links.dart';
 import '../widgets/dictionary_lookup.dart';
 import 'word_edit_screen.dart';
-import 'word_image_editor.dart';
 
 /// 단어 상세: 뜻·예문·발음(TTS)·사전 딥링크.
 class WordDetailScreen extends ConsumerStatefulWidget {
@@ -58,9 +59,20 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
     }
   }
 
-  Future<void> _editImage() async {
-    final saved = await editWordImage(context, ref, _word);
-    if (mounted && saved != null) setState(() => _word = saved);
+  /// 다시 찾은 예문을 카드에 넣는다.
+  Future<void> _addFoundExample(Example example) async {
+    final updated = await ref
+        .read(repositoryProvider)
+        .upsertWord(
+          _word.copyWith(
+            examples: [..._word.examples, example],
+            updatedAt: DateTime.now(),
+          ),
+        );
+    if (!mounted) return;
+    setState(() => _word = updated);
+    ref.invalidate(wordsProvider(updated.wordbookId));
+    invalidateData(ref);
   }
 
   Future<void> _toggleFavorite() async {
@@ -91,7 +103,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
         meanings: meanings,
         dictionarySourceTerms: {
           ...latest.dictionarySourceTerms,
-          selection.term,
+          ...selection.sourceTerms,
         }.toList(),
         partOfSpeech: latest.partOfSpeech.isEmpty
             ? selection.suggestedPartOfSpeech
@@ -103,279 +115,294 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
     setState(() => _word = updated);
     ref.invalidate(wordsProvider(updated.wordbookId));
     invalidateData(ref);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('선택한 사전 뜻을 추가했어요.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.wordDetailDictionaryMeaningsAdded)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final word = _word;
-    final settings = ref.watch(settingsProvider);
-    final tts = ref.read(ttsServiceProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('단어 상세'),
-        actions: [
-          IconButton(
-            tooltip: word.favorite ? '즐겨찾기 해제' : '즐겨찾기',
-            icon: Icon(word.favorite ? Icons.star : Icons.star_border),
-            onPressed: _toggleFavorite,
-          ),
-          IconButton(
-            tooltip: '단어 편집',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: _edit,
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppColors.panel,
+      body: PanelPage(
+        header: ContentWidth(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Tooltip(
-                      message: '단어 편집',
-                      child: InkWell(
-                        onTap: _edit,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            word.term,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                    BackButton(color: AppColors.ink),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: word.favorite
+                          ? l10n.wordDetailUnfavorite
+                          : l10n.wordDetailFavorite,
+                      icon: Icon(
+                        word.favorite
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: AppColors.ink,
                       ),
+                      onPressed: _toggleFavorite,
                     ),
-                    if (word.phonetic.isNotEmpty ||
-                        word.partOfSpeech.isNotEmpty)
-                      Text(
-                        [
-                          word.phonetic,
-                          word.partOfSpeech,
-                        ].where((value) => value.isNotEmpty).join(' · '),
-                        style: const TextStyle(color: AppColors.sub),
-                      ),
+                    IconButton(
+                      tooltip: l10n.wordEditWord,
+                      icon: Icon(Icons.edit_outlined, color: AppColors.ink),
+                      onPressed: _edit,
+                    ),
                   ],
                 ),
-              ),
-              SpeakButton(text: word.term, prominent: true),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 4, 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              word.term,
+                              style: TextStyle(
+                                fontSize: 42,
+                                height: 1.1,
+                                fontWeight: FontWeight.w300,
+                                letterSpacing: -0.8,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                PosChip(word.partOfSpeech, filled: true),
+                                if (word.phonetic.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    word.phonetic,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.sub,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SpeakButton(text: word.term, prominent: true),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            expandedInsets: EdgeInsets.zero,
-            segments: const [
-              ButtonSegment(
-                value: 'en-US',
-                icon: Icon(Icons.record_voice_over_outlined, size: 17),
-                label: Text('미국식'),
-              ),
-              ButtonSegment(
-                value: 'en-GB',
-                icon: Icon(Icons.record_voice_over_outlined, size: 17),
-                label: Text('영국식'),
-              ),
-            ],
-            selected: {settings.ttsLocale},
-            onSelectionChanged: (selection) {
-              final locale = selection.first;
-              ref.read(settingsProvider.notifier).setTtsLocale(locale);
-              tts.speak(word.term, locale: locale);
-            },
-          ),
-          const SizedBox(height: 12),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: _edit,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
+        ),
+        bodyPadding: EdgeInsets.zero,
+        body: ContentWidth(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            children: [
+              PanelLabel(l10n.wordDetailMyMeanings),
+              WhiteBlock(
+                onTap: _edit,
+                padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
+                      child: MeaningList(
+                        meanings: word.meanings,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.edit_outlined, size: 18, color: AppColors.sub),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              PanelLabel(l10n.wordExamples),
+              for (final e in word.examples) ...[
+                WhiteBlock(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 8, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '내가 저장한 뜻',
-                            style: TextStyle(color: AppColors.sub),
+                          Expanded(
+                            child: ExampleSentence(
+                              sentence: e.sentence,
+                              term: word.term,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w300,
+                                height: 1.45,
+                                color: AppColors.ink,
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          MeaningList(
-                            meanings: word.meanings,
-                            style: const TextStyle(fontSize: 15),
+                          SpeakButton(
+                            text: e.sentence,
+                            isSentence: true,
+                            tooltip: l10n.wordDetailListenExample,
                           ),
                         ],
                       ),
-                    ),
-                    const Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: AppColors.sub,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DictionaryLookupButton(
-            term: word.term,
-            meanings: () => word.meanings,
-            onSelected: _addDictionaryMeanings,
-          ),
-          DictionaryAttribution(terms: word.dictionarySourceTerms),
-          const SizedBox(height: 8),
-          _imageSection(word),
-          const SizedBox(height: 18),
-          const _Label('예문'),
-          ...word.examples.map(
-            (e) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
+                      if (e.translation.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
                           child: Text(
-                            e.sentence,
-                            style: const TextStyle(fontSize: 14),
+                            e.translation,
+                            style: TextStyle(
+                              color: AppColors.sub,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                        SpeakButton(
-                          text: e.sentence,
-                          isSentence: true,
-                          tooltip: '예문 듣기',
+                      ],
+                      if (e.source.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: e.source == 'Tatoeba' && e.sourceId.isNotEmpty
+                              ? () => _open(
+                                  'https://tatoeba.org/en/sentences/show/${e.sourceId}',
+                                )
+                              : null,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                l10n.wordExampleSource(
+                                  exampleSourceLabel(context, e),
+                                ),
+                                style: TextStyle(
+                                  color: AppColors.sub,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              if (e.source == 'Tatoeba' &&
+                                  e.sourceId.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.open_in_new_rounded,
+                                  color: AppColors.sub,
+                                  size: 13,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (word.examples.isEmpty)
+                for (final e
+                    in ref
+                            .watch(exampleSuggestionsProvider)
+                            .asData
+                            ?.value[word.id] ??
+                        const <Example>[]) ...[
+                  WhiteBlock(
+                    key: ValueKey('found-${e.sourceId}'),
+                    color: AppColors.panelHigh,
+                    padding: const EdgeInsets.fromLTRB(18, 14, 8, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.wordFoundExample,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.point,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ExampleSentence(
+                          sentence: e.sentence,
+                          term: word.term,
+                          highlight: AppColors.onPanel.withValues(alpha: 0.18),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w300,
+                            height: 1.45,
+                            color: AppColors.onPanel,
+                          ),
+                        ),
+                        if (e.translation.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            e.translation,
+                            style: TextStyle(
+                              color: AppColors.onPanelSub,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => _addFoundExample(e),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: Text(l10n.wordAddFoundExample),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.point,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    if (e.translation.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        e.translation,
-                        style: const TextStyle(
-                          color: AppColors.sub,
-                          fontSize: 13,
-                        ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              const SizedBox(height: 8),
+              WhiteBlock(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DictionaryLookupButton(
+                      term: word.term,
+                      meanings: () => word.meanings,
+                      onSelected: _addDictionaryMeanings,
+                    ),
+                    DictionaryAttribution(terms: word.dictionarySourceTerms),
+                    const SizedBox(height: 8),
+                    DictionaryLinks(
+                      term: word.term,
+                      language: TranslationLanguage.fromCode(
+                        word.translationLanguage,
                       ),
-                    ],
-                    if (e.source.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: e.source == 'Tatoeba' && e.sourceId.isNotEmpty
-                            ? () => _open(
-                                'https://tatoeba.org/en/sentences/show/${e.sourceId}',
-                              )
-                            : null,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '출처: ${e.source}${e.license.isEmpty ? '' : ' · ${e.license}'}',
-                              style: const TextStyle(
-                                color: AppColors.sub,
-                                fontSize: 11,
-                              ),
-                            ),
-                            if (e.source == 'Tatoeba' &&
-                                e.sourceId.isNotEmpty) ...[
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.open_in_new_rounded,
-                                color: AppColors.sub,
-                                size: 13,
-                              ),
-                            ],
-                          ],
-                        ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _open(
+                        'https://translate.google.com/?sl=en&tl=ko&text=${Uri.encodeComponent(word.term)}',
                       ),
-                    ],
+                      icon: const Icon(Icons.open_in_new, size: 15),
+                      label: Text(l10n.wordDetailGoogleTranslate),
+                    ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 8),
-          DictionaryLinks(term: word.term),
-          TextButton.icon(
-            onPressed: () => _open(
-              'https://translate.google.com/?sl=en&tl=ko&text=${Uri.encodeComponent(word.term)}',
-            ),
-            icon: const Icon(Icons.open_in_new, size: 15),
-            label: const Text('구글 번역'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _imageSection(Word word) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                '대표 이미지',
-                style: TextStyle(
-                  color: AppColors.sub,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (word.imageUrl.isNotEmpty)
-              TextButton.icon(
-                onPressed: _editImage,
-                icon: const Icon(Icons.edit_outlined, size: 17),
-                label: const Text('변경'),
-              ),
-          ],
         ),
-        const SizedBox(height: 8),
-        if (word.imageUrl.isNotEmpty)
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: _editImage,
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: WordImage(
-                  source: word.imageUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-              ),
-            ),
-          )
-        else
-          SizedBox(
-            width: double.infinity,
-            height: 112,
-            child: OutlinedButton.icon(
-              onPressed: _editImage,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('대표 이미지 추가'),
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -385,21 +412,4 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
-}
-
-class _Label extends StatelessWidget {
-  final String text;
-  const _Label(this.text);
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, top: 4),
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: AppColors.sub,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  );
 }

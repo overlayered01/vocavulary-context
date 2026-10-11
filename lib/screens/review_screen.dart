@@ -5,23 +5,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/review_examples.dart';
 import '../data/srs.dart';
+import '../l10n/l10n.dart';
 import '../models/study_log.dart';
 import '../models/word.dart';
-import '../widgets/meaning_fields.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/panel.dart';
 import '../widgets/speak_button.dart';
 
 /// 복습 방식.
 enum ReviewMode {
-  /// 예문 보고 단어 직접 입력 (MVP 기본).
+  /// 예문 보고 단어 직접 입력. 예문이 있는 카드만.
   input,
 
-  /// 예문 빈칸 채우기 — 4개 보기 중 고르는 객관식.
+  /// 예문 빈칸 채우기 — 4개 보기 중 고르는 객관식. 예문이 있는 카드만.
   choice,
+
+  /// 뜻 보고 단어 고르기. 예문 없이 모든 카드.
+  meaning,
+
+  /// 홈의 시작: 예문이 있으면 빈칸, 없으면 뜻을 보고 고른다.
+  mixed;
+
+  /// 예문이 있는 카드만 내는 방식.
+  bool get examplesOnly => this == input || this == choice;
+
+  /// 4개 보기 중 고르는 방식.
+  bool get usesChoices => this != input;
 }
 
-/// 예문 중심 복습 화면. [mode]에 따라 직접 입력 또는 객관식으로 출제한다.
+/// 예문 중심 복습 화면. 정답을 확인하면 같은 카드 위에서 단어가 채워지고,
+/// 사용자가 카드를 남기거나 버린다.
 class ReviewScreen extends ConsumerStatefulWidget {
   final ReviewMode mode;
   const ReviewScreen({super.key, this.mode = ReviewMode.input});
@@ -35,14 +49,19 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   /// 객관식 모드: 문제별 보기 목록 (정답 포함, 섞인 순서 고정).
   List<List<String>> _choices = [];
-
-  /// 각 문제에서 현재 보여 주는 예문 인덱스.
   List<int> _exampleIndexes = [];
   int _index = 0;
-  int _correct = 0;
+  int _remaining = 0;
   bool _loading = true;
   bool _revealed = false;
-  bool _wasCorrect = false;
+  bool _busy = false;
+
+  /// 객관식에서 방금 누른 보기. 정답 공개 전 잠깐 색으로 표시한다.
+  String? _picked;
+  bool _pickedCorrect = false;
+
+  /// 정답 공개 시 SRS를 반영한 단어. 버리기에서 마저 저장한다.
+  Word? _graded;
   final _input = TextEditingController();
 
   @override
@@ -55,18 +74,27 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final repo = ref.read(repositoryProvider);
     final settings = ref.read(settingsProvider);
     final all = await repo.getAllWords();
+    final mode = widget.mode;
     final session = Srs.buildSession(
-      all,
+      mode.examplesOnly
+          ? [
+              for (final w in all)
+                if (w.examples.isNotEmpty) w,
+            ]
+          : all,
       DateTime.now(),
       mixRatio: settings.reviewMixRatio,
       sessionSize: settings.sessionSize,
     );
+    if (!mounted) return;
     setState(() {
       _session = session;
+      _remaining = all.where((w) => w.status != LearnStatus.completed).length;
       _exampleIndexes = [
-        for (final word in session) ReviewExamples.initialIndex(word),
+        for (final word in session)
+          mode == ReviewMode.meaning ? -1 : ReviewExamples.initialIndex(word),
       ];
-      if (widget.mode == ReviewMode.choice) {
+      if (mode.usesChoices) {
         _choices = _buildChoices(session, all);
       }
       _loading = false;
@@ -108,448 +136,580 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     return _current.examples[exampleIndex];
   }
 
-  /// 예문에서 정답 단어를 빈칸으로 가린 문자열.
-  ///
-  /// 단어 경계에서 시작하는 변형형까지 가린다 (run → running, runs).
-  /// 반대로 다른 단어 속 부분 일치는 가리지 않는다 (art ↛ part).
-  String _clozeSentence(Word w, Example? example) {
-    if (example == null) return '(예문이 없습니다 — 뜻을 보고 단어를 입력하세요)';
-    final s = example.sentence;
-    final pattern = RegExp(
-      '\\b${RegExp.escape(w.term)}\\w*',
-      caseSensitive: false,
-    );
-    return s.replaceAll(pattern, '______');
-  }
-
-  void _showNextExample() {
-    final word = _current;
-    if (word.examples.length < 2) return;
+  Future<void> _pick(String option) async {
+    if (_busy || _revealed) return;
+    final ok = Srs.checkAnswer(option, _current.term);
     setState(() {
-      _exampleIndexes[_index] = ReviewExamples.nextIndex(
-        _exampleIndexes[_index],
-        word.examples.length,
-      );
+      _busy = true;
+      _picked = option;
+      _pickedCorrect = ok;
     });
+    await Future<void>.delayed(const Duration(milliseconds: 260));
+    if (!mounted) return;
+    await _reveal(ok);
   }
-
-  /// 입력을 채점해 공개한다.
-  Future<void> _check() => _reveal(Srs.checkAnswer(_input.text, _current.term));
-
-  /// '잘 모르겠어요' — 입력과 무관하게 오답 처리 후 정답을 공개한다.
-  Future<void> _giveUp() => _reveal(false);
 
   Future<void> _reveal(bool ok) async {
+    if (_revealed) return;
+    setState(() => _busy = true);
     final repo = ref.read(repositoryProvider);
     final now = DateTime.now();
-    final updated = ok
+    final graded = ok
         ? Srs.applyCorrect(_current, now)
         : Srs.applyWrong(_current, now);
-    await repo.upsertWord(updated);
+    // 버릴지는 사용자가 정하므로, 마지막 단계에 닿아도 여기서는 덱에 남긴다.
+    final kept = Srs.keep(graded);
+    await repo.upsertWord(kept);
     await repo.addStudyLog(
       StudyLog(id: '', wordId: _current.id, correct: ok, studiedAt: now),
     );
-    // 매 문제마다 갱신해 두면 중간에 나가도 홈 통계가 어긋나지 않는다.
     invalidateData(ref);
-
+    if (!mounted) return;
     setState(() {
+      _graded = kept;
       _revealed = true;
-      _wasCorrect = ok;
-      if (ok) _correct++;
+      _busy = false;
     });
   }
 
-  void _next() {
-    if (_index + 1 >= _session.length) {
-      setState(() => _index = _session.length); // 완료 상태로
-      return;
+  Future<void> _decide({required bool discard}) async {
+    final graded = _graded;
+    if (graded == null || _busy) return;
+    setState(() => _busy = true);
+    final wasInDeck = _current.status != LearnStatus.completed;
+    if (discard) {
+      await ref
+          .read(repositoryProvider)
+          .upsertWord(Srs.discard(graded, DateTime.now()));
+      invalidateData(ref);
     }
+    if (!mounted) return;
     setState(() {
-      _index++;
+      if (discard && wasInDeck) {
+        _remaining--;
+      } else if (!discard && !wasInDeck) {
+        _remaining++;
+      }
+      _busy = false;
       _revealed = false;
+      _picked = null;
+      _graded = null;
       _input.clear();
+      _index++;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (_session.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('예문 복습')),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(32),
-            child: Text(
-              '지금 복습할 단어가 없어요.\n단어를 추가하거나 나중에 다시 오세요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.sub, fontSize: 15),
-            ),
-          ),
-        ),
+        backgroundColor: AppColors.panel,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
-    if (_index >= _session.length) {
-      return _SummaryView(
-        correct: _correct,
+    if (_session.isEmpty || _index >= _session.length) {
+      return _DoneView(
+        empty: _session.isEmpty,
         total: _session.length,
-        onClose: () => Navigator.pop(context),
+        remaining: _remaining,
       );
     }
 
     final w = _current;
     final example = _currentExample;
-    final progress = (_index) / _session.length;
-    final isMixed = w.status == LearnStatus.completed;
-
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(widget.mode == ReviewMode.choice ? '빈칸 채우기' : '예문 복습'),
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Text(
-                '${_index + 1} / ${_session.length}',
-                style: const TextStyle(color: AppColors.sub, fontSize: 13),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppColors.line,
-              color: AppColors.ink,
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            const SizedBox(height: 16),
-            Row(
+      backgroundColor: AppColors.panel,
+      body: SafeArea(
+        child: ContentWidth(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Text(
-                    widget.mode == ReviewMode.choice
-                        ? '예문과 뜻을 보고 알맞은 단어를 고르세요'
-                        : '예문과 뜻을 보고 단어를 입력하세요',
-                    style: const TextStyle(color: AppColors.sub, fontSize: 13),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: l10n.commonClose,
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close_rounded, color: AppColors.onPanel),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_two(_index + 1)} / ${_two(_session.length)} · '
+                      '${l10n.reviewRemaining(_remaining)}',
+                      key: const ValueKey('review-progress'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.onPanelSub,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: (_index + (_revealed ? 1 : 0)) / _session.length,
+                      minHeight: 3,
+                      color: AppColors.point,
+                      backgroundColor: AppColors.panelLine,
+                    ),
                   ),
                 ),
-                SpeakButton(
-                  text: example?.sentence ?? w.term,
-                  isSentence: example != null,
-                  tooltip: '예문 듣기',
+                const SizedBox(height: 22),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _QuizCard(
+                          key: ValueKey('card-$_index'),
+                          word: w,
+                          example: example,
+                          revealed: _revealed,
+                        ),
+                        const SizedBox(height: 18),
+                        if (!_revealed && widget.mode.usesChoices)
+                          _ChoiceGrid(
+                            options: _choices[_index],
+                            picked: _picked,
+                            pickedCorrect: _pickedCorrect,
+                            onPick: _pick,
+                          ),
+                        if (!_revealed && !widget.mode.usesChoices)
+                          _AnswerInput(
+                            controller: _input,
+                            onSubmit: () =>
+                                _reveal(Srs.checkAnswer(_input.text, w.term)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  layoutBuilder: (current, previous) => Stack(
+                    fit: StackFit.passthrough,
+                    alignment: Alignment.bottomCenter,
+                    children: [...previous, ?current],
+                  ),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.3),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: _revealed
+                      ? Row(
+                          key: const ValueKey('decide'),
+                          children: [
+                            Expanded(
+                              child: PanelOutlineButton(
+                                label: l10n.reviewKeep,
+                                onPressed: () => _decide(discard: false),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: PointButton(
+                                key: const ValueKey('review-discard'),
+                                label: l10n.reviewDiscard,
+                                onPressed: () => _decide(discard: true),
+                              ),
+                            ),
+                          ],
+                        )
+                      : widget.mode.usesChoices
+                      ? PanelOutlineButton(
+                          key: const ValueKey('dont-know'),
+                          label: l10n.reviewDontKnow,
+                          height: 52,
+                          onPressed: _busy ? null : () => _reveal(false),
+                        )
+                      : Row(
+                          key: const ValueKey('input-actions'),
+                          children: [
+                            Expanded(
+                              child: PanelOutlineButton(
+                                label: l10n.reviewDontKnow,
+                                onPressed: _busy ? null : () => _reveal(false),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: PointButton(
+                                label: l10n.reviewCheckAnswer,
+                                onPressed: _busy
+                                    ? null
+                                    : () => _reveal(
+                                        Srs.checkAnswer(_input.text, w.term),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ],
             ),
-            if (w.examples.length > 1)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _showNextExample,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(
-                    '다른 예문  ${_exampleIndexes[_index] + 1}/${w.examples.length}',
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
-            // 빈칸 예문 카드
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _clozeSentence(w, example),
-                    style: const TextStyle(fontSize: 16, height: 1.6),
-                  ),
-                  const Divider(height: 20),
-                  MeaningList(
-                    meanings: w.meanings,
-                    style: const TextStyle(color: AppColors.sub, fontSize: 13),
-                  ),
-                  if (w.partOfSpeech.isNotEmpty || w.phonetic.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      [
-                        w.partOfSpeech,
-                        w.phonetic,
-                      ].where((value) => value.isNotEmpty).join(' · '),
-                      style: const TextStyle(
-                        color: AppColors.sub,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            if (!_revealed && widget.mode == ReviewMode.choice) ...[
-              for (final option in _choices[_index])
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => _reveal(Srs.checkAnswer(option, w.term)),
-                      child: Text(option, style: const TextStyle(fontSize: 16)),
-                    ),
-                  ),
-                ),
-              Center(
-                child: TextButton(
-                  onPressed: _giveUp,
-                  child: const Text(
-                    '잘 모르겠어요',
-                    style: TextStyle(color: AppColors.sub),
-                  ),
-                ),
-              ),
-            ] else if (!_revealed) ...[
-              TextField(
-                controller: _input,
-                autofocus: true,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.ink,
-                ),
-                decoration: const InputDecoration(hintText: '단어 입력'),
-                onSubmitted: (_) => _check(),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  '힌트: ${w.inputHint}',
-                  style: const TextStyle(color: AppColors.sub, fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _giveUp,
-                      child: const Text('잘 모르겠어요'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _check,
-                      child: const Text('정답 확인'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else
-              _FeedbackBlock(
-                word: w,
-                example: example,
-                wasCorrect: _wasCorrect,
-                isMixed: isMixed,
-                onNext: _next,
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
 }
 
-class _FeedbackBlock extends StatelessWidget {
+/// 예문 카드. [revealed]가 되면 빈칸이 채워지고 단어·뜻이 아래로 펼쳐진다.
+class _QuizCard extends StatelessWidget {
   final Word word;
   final Example? example;
-  final bool wasCorrect;
-  final bool isMixed;
-  final VoidCallback onNext;
-  const _FeedbackBlock({
+  final bool revealed;
+  const _QuizCard({
+    super.key,
     required this.word,
     required this.example,
-    required this.wasCorrect,
-    required this.isMixed,
-    required this.onNext,
+    required this.revealed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final l10n = context.l10n;
+    final example = this.example;
+    final sentenceStyle = TextStyle(
+      fontSize: 25,
+      fontWeight: FontWeight.w300,
+      height: 1.45,
+      color: AppColors.ink,
+    );
+    return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: wasCorrect ? AppColors.card : AppColors.bg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: wasCorrect ? AppColors.line : AppColors.ink,
-              width: wasCorrect ? 1 : 1.5,
+        Positioned(
+          left: 16,
+          right: 16,
+          top: -10,
+          height: 40,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.tab,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(22),
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                wasCorrect ? Icons.check_circle_outline : Icons.highlight_off,
-                color: AppColors.ink,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(26),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 14, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      wasCorrect ? '정답입니다' : '아쉬워요. 정답은',
-                      style: const TextStyle(
-                        color: AppColors.sub,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          word.term,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        SpeakButton(text: word.term),
-                      ],
+                    PosChip(word.partOfSpeech),
+                    const Spacer(),
+                    SpeakButton(
+                      text: example?.sentence ?? word.term,
+                      isSentence: example != null,
+                      tooltip: l10n.speakListenExample,
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-        if (example != null) ...[
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  example!.sentence,
-                  style: const TextStyle(fontSize: 14),
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: example == null
+                      ? Text(
+                          word.meanings.join(', '),
+                          key: const ValueKey('meanings-prompt'),
+                          style: sentenceStyle.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        )
+                      : TweenAnimationBuilder<double>(
+                          key: ValueKey('sentence-$revealed'),
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 380),
+                          builder: (context, t, _) => ExampleSentence(
+                            sentence: example.sentence,
+                            term: word.term,
+                            blank: !revealed,
+                            highlight: AppColors.point.withValues(
+                              alpha: revealed ? t : 1,
+                            ),
+                            style: sentenceStyle,
+                          ),
+                        ),
                 ),
-              ),
-              SpeakButton(
-                text: example!.sentence,
-                isSentence: true,
-                tooltip: '예문 듣기',
-              ),
-            ],
+                if (example != null && example.translation.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: ExampleTranslation(
+                      key: const ValueKey('quiz-translation'),
+                      translation: example.translation,
+                      meanings: word.meanings,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: AppColors.sub,
+                      ),
+                    ),
+                  ),
+                ],
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: !revealed
+                      ? const SizedBox(width: double.infinity)
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 20, right: 10),
+                          child: Container(
+                            padding: const EdgeInsets.only(top: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: AppColors.chip),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        word.term,
+                                        key: const ValueKey('answer-term'),
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w300,
+                                          letterSpacing: -0.5,
+                                          color: AppColors.ink,
+                                        ),
+                                      ),
+                                      if (word.phonetic.isNotEmpty)
+                                        Text(
+                                          word.phonetic,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.sub,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Flexible(
+                                  child: Text(
+                                    word.meanings.join(', '),
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
           ),
-          if (example!.translation.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                example!.translation,
-                style: const TextStyle(color: AppColors.sub, fontSize: 13),
-              ),
-            ),
-          if (example!.source.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                '출처: ${example!.source}${example!.license.isEmpty ? '' : ' · ${example!.license}'}',
-                style: const TextStyle(color: AppColors.sub, fontSize: 10),
-              ),
-            ),
-        ],
-        if (isMixed) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              '복습 섞기로 다시 나온 단어예요 (학습완료)',
-              style: TextStyle(color: AppColors.sub, fontSize: 12),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(onPressed: onNext, child: const Text('다음')),
         ),
       ],
     );
   }
 }
 
-class _SummaryView extends StatelessWidget {
-  final int correct;
-  final int total;
-  final VoidCallback onClose;
-  const _SummaryView({
-    required this.correct,
-    required this.total,
-    required this.onClose,
+class _ChoiceGrid extends StatelessWidget {
+  final List<String> options;
+  final String? picked;
+  final bool pickedCorrect;
+  final ValueChanged<String> onPick;
+  const _ChoiceGrid({
+    required this.options,
+    required this.picked,
+    required this.pickedCorrect,
+    required this.onPick,
   });
 
   @override
   Widget build(BuildContext context) {
-    final pct = total == 0 ? 0 : (correct * 100 / total).round();
-    return Scaffold(
-      appBar: AppBar(title: const Text('복습 완료')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$pct%',
-                style: const TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '복습을 완료했어요',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '$total문제 중 $correct개 정답',
-                style: const TextStyle(color: AppColors.sub),
-              ),
-              const SizedBox(height: 28),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - 8) / 2;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final option in options)
               SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: onClose,
-                  child: const Text('홈으로'),
+                width: width,
+                height: 58,
+                child: _ChoiceButton(
+                  label: option,
+                  state: picked != option ? null : pickedCorrect,
+                  onTap: () => onPick(option),
                 ),
               ),
-            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ChoiceButton extends StatelessWidget {
+  final String label;
+
+  /// null: 기본, true: 정답으로 고름, false: 오답으로 고름.
+  final bool? state;
+  final VoidCallback onTap;
+  const _ChoiceButton({
+    required this.label,
+    required this.state,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = switch (state) {
+      true => AppColors.point,
+      false => AppColors.ink,
+      null => AppColors.panelHigh,
+    };
+    final fg = state == true ? AppColors.onPoint : AppColors.onPanel;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w300,
+                  color: fg,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnswerInput extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSubmit;
+  const _AnswerInput({required this.controller, required this.onSubmit});
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: controller,
+    autofocus: true,
+    textAlign: TextAlign.center,
+    textInputAction: TextInputAction.done,
+    style: TextStyle(
+      fontSize: 22,
+      fontWeight: FontWeight.w300,
+      color: AppColors.ink,
+    ),
+    decoration: InputDecoration(
+      fillColor: AppColors.card,
+      hintText: context.l10n.reviewInputHint,
+      hintStyle: TextStyle(color: AppColors.sub, fontSize: 16),
+    ),
+    onSubmitted: (_) => onSubmit(),
+  );
+}
+
+/// 세션을 마쳤거나 꺼낼 카드가 없을 때. 남은 카드 수만 크게 보여 준다.
+class _DoneView extends StatelessWidget {
+  final bool empty;
+  final int total;
+  final int remaining;
+  const _DoneView({
+    required this.empty,
+    required this.total,
+    required this.remaining,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
+      backgroundColor: AppColors.panel,
+      body: SafeArea(
+        child: ContentWidth(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(26, 24, 26, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Spacer(),
+                Text(
+                  empty ? l10n.reviewEmpty : l10n.reviewDoneTitle(total),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.onPanelSub,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.homeRemainingCards,
+                  style: TextStyle(fontSize: 13, color: AppColors.onPanelSub),
+                ),
+                Text(
+                  '$remaining',
+                  key: const ValueKey('done-remaining'),
+                  style: TextStyle(
+                    fontSize: 96,
+                    height: 1,
+                    fontWeight: FontWeight.w200,
+                    letterSpacing: -4,
+                    color: AppColors.point,
+                  ),
+                ),
+                const Spacer(flex: 2),
+                PointButton(
+                  label: l10n.reviewGoHome,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
           ),
         ),
       ),

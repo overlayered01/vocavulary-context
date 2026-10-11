@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/migration.dart';
 import '../data/supabase_repository.dart';
+import '../l10n/l10n.dart';
 import '../providers.dart';
 import '../theme.dart';
 
@@ -52,22 +53,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final books = await local.getWordbooks();
     if (books.isEmpty || !mounted) return;
 
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('로컬 단어장 가져오기'),
-        content: Text(
-          '이 기기에서 만든 단어장 ${books.length}개를 클라우드로 복사할까요?\n'
-          '이미 클라우드에 있는 단어장은 건너뜁니다.',
-        ),
+        title: Text(l10n.loginMigrateTitle),
+        content: Text(l10n.loginMigrateConfirm(books.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('나중에'),
+            child: Text(l10n.loginLater),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('가져오기'),
+            child: Text(l10n.loginImport),
           ),
         ],
       ),
@@ -80,7 +79,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          migrated > 0 ? '단어장 $migrated개를 가져왔어요.' : '모든 단어장이 이미 클라우드에 있어요.',
+          migrated > 0
+              ? context.l10n.loginMigrated(migrated)
+              : context.l10n.loginAlreadyInCloud,
         ),
       ),
     );
@@ -88,38 +89,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   /// 인증 예외를 사용자용 안내 문구로 바꾼다. (raw 예외 문자열 노출 방지)
   String _friendlyError(Object e) {
+    final l10n = context.l10n;
     if (e is AuthException) {
       return switch (e.code) {
-        'invalid_credentials' => '이메일 또는 비밀번호가 올바르지 않아요.',
-        'user_already_exists' => '이미 가입된 이메일이에요. 로그인해 주세요.',
-        'weak_password' => '비밀번호가 너무 짧아요. 6자 이상 입력해 주세요.',
-        'email_not_confirmed' => '이메일 인증이 필요해요. 받은 편지함을 확인해 주세요.',
-        'over_email_send_rate_limit' => '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
-        _ => '로그인에 실패했어요. (${e.message})',
+        'invalid_credentials' => l10n.loginErrorInvalidCredentials,
+        'user_already_exists' => l10n.loginErrorUserExists,
+        'weak_password' => l10n.loginErrorWeakPassword,
+        'email_not_confirmed' => l10n.loginErrorEmailNotConfirmed,
+        'over_email_send_rate_limit' => l10n.loginErrorRateLimit,
+        _ => l10n.loginErrorGeneric(e.message),
       };
     }
-    return '요청을 처리하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.';
+    return l10n.loginErrorNetwork;
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = ref.read(authServiceProvider);
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('로그인')),
+      appBar: AppBar(title: Text(l10n.loginTitle)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 40),
-          const Center(
+          Center(
             child: Text(
-              'WordCloud',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+              l10n.appTitle,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 4),
-          const Center(
+          Center(
             child: Text(
-              '예문으로 쉽게, 알람으로 꾸준히',
+              l10n.loginTagline,
               style: TextStyle(color: AppColors.sub),
             ),
           ),
@@ -127,25 +130,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           TextField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: '이메일'),
+            decoration: InputDecoration(labelText: l10n.loginEmail),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _password,
             obscureText: true,
-            decoration: const InputDecoration(labelText: '비밀번호'),
+            decoration: InputDecoration(labelText: l10n.loginPassword),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.error_outline, size: 16, color: AppColors.ink),
+                Icon(Icons.error_outline, size: 16, color: AppColors.ink),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: AppColors.ink, fontSize: 12),
+                    style: TextStyle(color: AppColors.ink, fontSize: 12),
                   ),
                 ),
               ],
@@ -167,7 +170,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('로그인'),
+                : Text(l10n.loginTitle),
           ),
           const SizedBox(height: 10),
           OutlinedButton(
@@ -179,12 +182,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       _password.text,
                     ),
                   ),
-            child: const Text('이메일로 회원가입'),
+            child: Text(l10n.loginSignUpWithEmail),
           ),
           const SizedBox(height: 10),
           OutlinedButton(
             onPressed: _busy ? null : () => _run(auth.signInWithGoogle),
-            child: const Text('구글로 계속하기'),
+            child: Text(l10n.loginContinueWithGoogle),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/migration.dart';
 import '../data/supabase_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/wordbook.dart' hide Visibility;
 import '../providers.dart';
 import '../theme.dart';
@@ -35,13 +36,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       final book = await repo.getSharedWordbook(code);
       if (!mounted) return;
       if (book == null) {
-        _snack('코드에 해당하는 공유 단어장을 찾을 수 없어요.');
+        _snack(context.l10n.exploreCodeNotFound);
         return;
       }
       final done = await _importBook(repo, book);
       if (done && mounted) _code.clear();
     } catch (_) {
-      if (mounted) _snack('가져오지 못했어요. 네트워크 상태를 확인해 주세요.');
+      if (mounted) _snack(context.l10n.exploreImportFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -52,22 +53,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final words = await repo.getSharedWords(book.id);
     if (!mounted) return false;
 
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("'${book.title}' 복제"),
-        content: Text(
-          '단어 ${words.length}개를 내 단어장으로 복제할까요?\n'
-          '학습 상태는 처음부터 시작해요.',
-        ),
+        title: Text(l10n.exploreCopyTitle(book.title)),
+        content: Text(l10n.exploreCopyConfirm(words.length)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('복제'),
+            child: Text(l10n.exploreCopy),
           ),
         ],
       ),
@@ -76,7 +75,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     await importSharedWordbook(repo, book, words);
     invalidateData(ref);
-    if (mounted) _snack("'${book.title}' 단어장을 가져왔어요.");
+    if (mounted) _snack(context.l10n.exploreImported(book.title));
     return true;
   }
 
@@ -90,10 +89,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   Widget build(BuildContext context) {
     final repo = ref.watch(repositoryProvider);
     final cloudAvailable = ref.watch(cloudAvailableProvider);
+    final l10n = context.l10n;
 
     if (repo is! SupabaseRepository) {
       return Scaffold(
-        appBar: AppBar(title: const Text('탐색')),
+        appBar: AppBar(title: Text(l10n.exploreTitle)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -108,29 +108,29 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       Container(
                         width: 64,
                         height: 64,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.accentSoft,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.travel_explore_rounded,
                           size: 30,
                           color: AppColors.accentDark,
                         ),
                       ),
                       const SizedBox(height: 18),
-                      const Text(
-                        '새로운 단어장을\n둘러보세요',
+                      Text(
+                        l10n.exploreLoggedOutHeadline,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           height: 1.25,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text(
-                        '공유 단어장 탐색은 로그인 후 사용할 수 있어요.',
+                      Text(
+                        l10n.exploreLoginRequired,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.sub,
@@ -148,14 +148,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                 builder: (_) => const LoginScreen(),
                               ),
                             ),
-                            child: const Text('로그인하기'),
+                            child: Text(l10n.exploreGoToLogin),
                           ),
                         ),
                       ] else ...[
                         const SizedBox(height: 12),
-                        const Text(
-                          'Supabase 연결 후 사용할 수 있습니다.',
-                          style: TextStyle(color: AppColors.sub, fontSize: 11),
+                        Text(
+                          l10n.exploreSupabaseRequired,
+                          style: TextStyle(
+                            color: AppColors.sub,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ],
@@ -171,14 +174,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final publicBooks = ref.watch(publicWordbooksProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('탐색')),
+      appBar: AppBar(title: Text(l10n.exploreTitle)),
       body: RefreshIndicator(
         color: AppColors.accentDark,
         onRefresh: () => ref.refresh(publicWordbooksProvider.future),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            const _SectionLabel('공유 코드로 가져오기'),
+            _SectionLabel(l10n.exploreImportByCode),
             Card(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
@@ -190,9 +193,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         Expanded(
                           child: TextField(
                             controller: _code,
-                            decoration: const InputDecoration(
-                              labelText: '공유 코드',
-                              hintText: '전달받은 코드를 붙여넣으세요',
+                            decoration: InputDecoration(
+                              labelText: l10n.wordbookShareCode,
+                              hintText: l10n.exploreCodeHint,
                             ),
                             onSubmitted: (_) => _importByCode(repo),
                           ),
@@ -208,40 +211,43 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('가져오기'),
+                              : Text(l10n.exploreImport),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '단어장 메뉴의 공유·공개 설정에서 코드를 복사해 전달할 수 있어요.',
-                      style: TextStyle(color: AppColors.sub, fontSize: 11),
+                    Text(
+                      l10n.exploreCodeHelp,
+                      style: TextStyle(
+                        color: AppColors.sub,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 22),
-            const _SectionLabel('공개 단어장'),
+            _SectionLabel(l10n.explorePublicWordbooks),
             publicBooks.when(
               loading: () => const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, _) => const Padding(
-                padding: EdgeInsets.all(24),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(24),
                 child: Text(
-                  '공개 단어장을 불러오지 못했어요.\n아래로 당겨 새로고침해 보세요.',
+                  l10n.explorePublicLoadFailed,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.sub),
                 ),
               ),
               data: (books) {
                 if (books.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24),
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
                     child: Text(
-                      '아직 공개된 단어장이 없어요.',
+                      l10n.explorePublicEmpty,
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.sub),
                     ),
@@ -296,7 +302,7 @@ class _PublicBookCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       book.description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.sub,
                         fontSize: 12,
                       ),
@@ -320,7 +326,7 @@ class _PublicBookCard extends StatelessWidget {
                             ),
                             child: Text(
                               tag,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.sub,
                                 fontSize: 11,
                               ),
@@ -333,7 +339,10 @@ class _PublicBookCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            OutlinedButton(onPressed: onImport, child: const Text('복제')),
+            OutlinedButton(
+              onPressed: onImport,
+              child: Text(context.l10n.exploreCopy),
+            ),
           ],
         ),
       ),
@@ -349,7 +358,7 @@ class _SectionLabel extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         color: AppColors.sub,
         fontSize: 13,
         fontWeight: FontWeight.w600,

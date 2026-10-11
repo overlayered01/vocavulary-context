@@ -114,6 +114,7 @@ class SupabaseRepository implements VocabRepository {
             wordbookId: word.wordbookId,
             group: word.group,
             term: word.term,
+            translationLanguage: word.translationLanguage,
             meanings: word.meanings,
             dictionarySourceTerms: word.dictionarySourceTerms,
             partOfSpeech: word.partOfSpeech,
@@ -201,14 +202,21 @@ class SupabaseRepository implements VocabRepository {
   }
 
   /// shared/public 단어장의 단어 목록 (소유자 무관 — 복제용 읽기).
+  /// 사진에서 가져온 예문(책 문장 등)은 다른 사람에게 보이지 않게 뺀다.
   Future<List<Word>> getSharedWords(String wordbookId) async {
     final rows = await _db
         .from('words')
         .select('data')
         .eq('wordbook_id', wordbookId)
         .order('created_at', ascending: true);
-    return rows
-        .map((r) => Word.fromMap(Map<String, dynamic>.from(r['data'])))
-        .toList();
+    return rows.map((r) {
+      final word = Word.fromMap(Map<String, dynamic>.from(r['data']));
+      return word.copyWith(
+        examples: [
+          for (final e in word.examples)
+            if (e.source != Example.photoSource) e,
+        ],
+      );
+    }).toList();
   }
 }

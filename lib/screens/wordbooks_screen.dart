@@ -2,9 +2,12 @@ import 'package:flutter/material.dart' hide Visibility;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
+import '../models/word.dart';
 import '../models/wordbook.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/panel.dart';
 import 'wordbook_detail_screen.dart';
 
 class WordbooksScreen extends ConsumerWidget {
@@ -13,43 +16,101 @@ class WordbooksScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booksAsync = ref.watch(wordbooksProvider);
+    final words = ref.watch(allWordsProvider).asData?.value ?? const <Word>[];
+    final remaining = words
+        .where((w) => w.status != LearnStatus.completed)
+        .length;
+    final l10n = context.l10n;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('내 단어장'),
-        actions: [
-          IconButton(
-            tooltip: '새 단어장',
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.card,
-              fixedSize: const Size.square(40),
-            ),
-            icon: const Icon(Icons.add),
-            onPressed: () => _createDialog(context, ref),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: booksAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('오류: $e')),
-        data: (books) {
-          if (books.isEmpty) {
-            return const Center(
-              child: Text(
-                '단어장이 없습니다.\n+ 버튼으로 추가하세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.sub),
+    return PanelPage(
+      header: ContentWidth(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(26, 18, 22, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HeaderEyebrow(
+                'WORDBOOKS',
+                trailing: TextButton.icon(
+                  onPressed: () => _createDialog(context, ref),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.point,
+                    foregroundColor: AppColors.onPoint,
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: Text(l10n.wordbooksNew),
+                ),
               ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.navWordbooks,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.5,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text.rich(
+                      TextSpan(
+                        text: '${l10n.homeRemainingCards} ',
+                        children: [
+                          TextSpan(
+                            text: '$remaining',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.sub2),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      bodyPadding: EdgeInsets.zero,
+      body: ContentWidth(
+        child: booksAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text(l10n.wordbookError('$e'))),
+          data: (books) {
+            if (books.isEmpty) {
+              return Center(
+                child: Text(
+                  l10n.wordbooksEmpty,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.onPanelSub),
+                ),
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
+              itemCount: books.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, i) =>
+                  _WordbookCard(book: books[i], highlighted: i == 0),
             );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            itemCount: books.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (_, i) => _WordbookCard(book: books[i]),
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -57,8 +118,8 @@ class WordbooksScreen extends ConsumerWidget {
   Future<void> _createDialog(BuildContext context, WidgetRef ref) async {
     final result = await showWordbookDialog(
       context,
-      dialogTitle: '새 단어장',
-      confirmLabel: '만들기',
+      dialogTitle: context.l10n.wordbooksNew,
+      confirmLabel: context.l10n.wordbooksCreate,
     );
     if (result == null || result.title.isEmpty) return;
     final repo = ref.read(repositoryProvider);
@@ -86,6 +147,7 @@ Future<({String title, List<String> tags})?> showWordbookDialog(
 }) {
   final titleCtrl = TextEditingController(text: initialTitle);
   final tagsCtrl = TextEditingController(text: initialTags.join(', '));
+  final l10n = context.l10n;
 
   ({String title, List<String> tags}) collect() {
     final seen = <String>{};
@@ -106,14 +168,14 @@ Future<({String title, List<String> tags})?> showWordbookDialog(
           TextField(
             controller: titleCtrl,
             autofocus: true,
-            decoration: const InputDecoration(labelText: '단어장 이름'),
+            decoration: InputDecoration(labelText: l10n.wordbooksNameLabel),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: tagsCtrl,
-            decoration: const InputDecoration(
-              labelText: '태그',
-              hintText: '토익, 일상회화 (쉼표로 구분)',
+            decoration: InputDecoration(
+              labelText: l10n.wordbooksTagsLabel,
+              hintText: l10n.wordbooksTagsHint,
             ),
             onSubmitted: (_) => Navigator.pop(ctx, collect()),
           ),
@@ -122,7 +184,7 @@ Future<({String title, List<String> tags})?> showWordbookDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('취소'),
+          child: Text(l10n.commonCancel),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(ctx, collect()),
@@ -135,102 +197,140 @@ Future<({String title, List<String> tags})?> showWordbookDialog(
 
 class _WordbookCard extends ConsumerWidget {
   final Wordbook book;
-  const _WordbookCard({required this.book});
+
+  /// 맨 위 단어장은 흰 카드, 나머지는 패널 톤으로 구분한다.
+  final bool highlighted;
+  const _WordbookCard({required this.book, this.highlighted = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wordsAsync = ref.watch(wordsProvider(book.id));
-    final count = wordsAsync.asData?.value.length ?? 0;
+    final words = ref.watch(wordsProvider(book.id)).asData?.value ?? const [];
+    final count = words.length;
+    final left = words.where((w) => w.status != LearnStatus.completed).length;
+    final l10n = context.l10n;
+    final fg = highlighted ? AppColors.ink : AppColors.onPanel;
+    final track = highlighted ? AppColors.chip : AppColors.panel;
+    final bar = highlighted ? AppColors.ink : AppColors.point;
 
-    return Card(
+    return Material(
+      color: highlighted ? AppColors.card : AppColors.panelHigh,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => WordbookDetailScreen(book: book)),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: AppColors.accentDark,
-                  size: 23,
-                ),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              book.title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          if (book.visibility != Visibility.private) ...[
-                            const SizedBox(width: 6),
-                            Icon(
-                              book.visibility == Visibility.public
-                                  ? Icons.public
-                                  : Icons.link,
-                              size: 15,
-                              color: AppColors.sub,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '단어 $count개',
+          padding: const EdgeInsets.fromLTRB(20, 10, 6, 18),
+          child: DefaultTextStyle.merge(
+            style: TextStyle(color: fg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        book.title,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: AppColors.sub,
-                          fontSize: 13,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (book.tags.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: book.tags.map((t) => _Tag(t)).toList(),
+                    ),
+                    if (book.visibility != Visibility.private) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        book.visibility == Visibility.public
+                            ? Icons.public
+                            : Icons.link,
+                        size: 14,
+                        color: fg.withValues(alpha: 0.6),
+                      ),
+                    ],
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      tooltip: l10n.wordbooksMenu,
+                      icon: Icon(
+                        Icons.more_vert,
+                        size: 20,
+                        color: fg.withValues(alpha: 0.6),
+                      ),
+                      onSelected: (v) {
+                        if (v == 'rename') _rename(context, ref);
+                        if (v == 'share') _shareSettings(context, ref);
+                        if (v == 'delete') _delete(context, ref, count);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'rename',
+                          child: Text(l10n.wordbooksMenuRename),
+                        ),
+                        PopupMenuItem(
+                          value: 'share',
+                          child: Text(l10n.wordbooksShareSettings),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(l10n.wordbooksMenuDelete),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$left',
+                        style: const TextStyle(
+                          fontSize: 40,
+                          height: 1,
+                          fontWeight: FontWeight.w200,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.wordbooksCardsLeft(count),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: fg.withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ),
+                      for (final tag in book.tags.take(2))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: _Tag(
+                            tag,
+                            background: highlighted
+                                ? AppColors.chip
+                                : AppColors.panel,
+                          ),
+                        ),
                     ],
                   ),
                 ),
-              ),
-              PopupMenuButton<String>(
-                tooltip: '단어장 메뉴',
-                icon: const Icon(Icons.more_vert, color: AppColors.sub),
-                onSelected: (v) {
-                  if (v == 'rename') _rename(context, ref);
-                  if (v == 'share') _shareSettings(context, ref);
-                  if (v == 'delete') _delete(context, ref, count);
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'rename', child: Text('이름·태그 편집')),
-                  PopupMenuItem(value: 'share', child: Text('공유·공개 설정')),
-                  PopupMenuItem(value: 'delete', child: Text('단어장 삭제')),
-                ],
-              ),
-            ],
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: count == 0 ? 0 : left / count,
+                      minHeight: 4,
+                      color: bar,
+                      backgroundColor: track,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -240,8 +340,8 @@ class _WordbookCard extends ConsumerWidget {
   Future<void> _rename(BuildContext context, WidgetRef ref) async {
     final result = await showWordbookDialog(
       context,
-      dialogTitle: '단어장 편집',
-      confirmLabel: '저장',
+      dialogTitle: context.l10n.wordbooksEditTitle,
+      confirmLabel: context.l10n.commonSave,
       initialTitle: book.title,
       initialTags: book.tags,
     );
@@ -254,10 +354,11 @@ class _WordbookCard extends ConsumerWidget {
 
   /// 공개 범위(비공개/코드 공유/공개) 설정 + 공유 코드 복사. 클라우드 모드 전용.
   Future<void> _shareSettings(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     if (!ref.read(repositoryProvider).isCloud) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('공유·공개는 로그인 후 사용할 수 있어요.')));
+      ).showSnackBar(SnackBar(content: Text(l10n.wordbooksShareLoginRequired)));
       return;
     }
 
@@ -266,17 +367,26 @@ class _WordbookCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('공유·공개 설정'),
+          title: Text(l10n.wordbooksShareSettings),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SegmentedButton<Visibility>(
                 expandedInsets: EdgeInsets.zero,
-                segments: const [
-                  ButtonSegment(value: Visibility.private, label: Text('비공개')),
-                  ButtonSegment(value: Visibility.shared, label: Text('코드 공유')),
-                  ButtonSegment(value: Visibility.public, label: Text('공개')),
+                segments: [
+                  ButtonSegment(
+                    value: Visibility.private,
+                    label: Text(l10n.wordbooksVisibilityPrivate),
+                  ),
+                  ButtonSegment(
+                    value: Visibility.shared,
+                    label: Text(l10n.wordbooksVisibilityShared),
+                  ),
+                  ButtonSegment(
+                    value: Visibility.public,
+                    label: Text(l10n.wordbooksVisibilityPublic),
+                  ),
                 ],
                 selected: {selected},
                 onSelectionChanged: (s) =>
@@ -284,14 +394,14 @@ class _WordbookCard extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(switch (selected) {
-                Visibility.private => '나만 볼 수 있어요.',
-                Visibility.shared => '공유 코드를 아는 사람이 이 단어장을 복제할 수 있어요.',
-                Visibility.public => '탐색 탭의 공개 목록에 올라가고 누구나 복제할 수 있어요.',
-              }, style: const TextStyle(color: AppColors.sub, fontSize: 12)),
+                Visibility.private => l10n.wordbooksVisibilityPrivateDesc,
+                Visibility.shared => l10n.wordbooksVisibilitySharedDesc,
+                Visibility.public => l10n.wordbooksVisibilityPublicDesc,
+              }, style: TextStyle(color: AppColors.sub, fontSize: 12)),
               if (selected != Visibility.private) ...[
                 const SizedBox(height: 14),
-                const Text(
-                  '공유 코드',
+                Text(
+                  l10n.wordbookShareCode,
                   style: TextStyle(color: AppColors.sub, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
@@ -311,14 +421,14 @@ class _WordbookCard extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: '코드 복사',
+                        tooltip: l10n.wordbooksCopyCode,
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.copy, size: 17),
                         onPressed: () async {
                           await Clipboard.setData(ClipboardData(text: book.id));
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(content: Text('공유 코드를 복사했어요.')),
+                              SnackBar(content: Text(l10n.wordbooksCodeCopied)),
                             );
                           }
                         },
@@ -332,11 +442,11 @@ class _WordbookCard extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소'),
+              child: Text(l10n.commonCancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, selected),
-              child: const Text('저장'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -350,23 +460,24 @@ class _WordbookCard extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref, int count) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("'${book.title}' 삭제"),
+        title: Text(l10n.wordbookDeleteTitle(book.title)),
         content: Text(
           count > 0
-              ? '단어장에 든 단어 $count개도 함께 삭제됩니다.\n삭제한 단어장은 되돌릴 수 없어요.'
-              : '삭제한 단어장은 되돌릴 수 없어요.',
+              ? l10n.wordbooksDeleteWithWords(count)
+              : l10n.wordbooksDeleteEmpty,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -380,17 +491,15 @@ class _WordbookCard extends ConsumerWidget {
 
 class _Tag extends StatelessWidget {
   final String text;
-  const _Tag(this.text);
+  final Color background;
+  const _Tag(this.text, {required this.background});
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
     decoration: BoxDecoration(
-      color: AppColors.chip,
-      borderRadius: BorderRadius.circular(20),
+      color: background,
+      borderRadius: BorderRadius.circular(999),
     ),
-    child: Text(
-      text,
-      style: const TextStyle(color: AppColors.sub, fontSize: 11),
-    ),
+    child: Text(text, style: const TextStyle(fontSize: 11)),
   );
 }

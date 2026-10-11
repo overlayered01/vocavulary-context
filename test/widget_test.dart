@@ -1,15 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:vocabulary/data/review_examples.dart';
 import 'package:vocabulary/data/srs.dart';
+import 'package:vocabulary/l10n/l10n.dart';
 import 'package:vocabulary/models/app_settings.dart';
+import 'package:vocabulary/models/reminder_schedule.dart';
 import 'package:vocabulary/models/word.dart';
 import 'package:vocabulary/services/example_source_service.dart';
+import 'package:vocabulary/services/reminder_planner.dart';
+
+final ko = lookupAppLocalizations(const Locale('ko'));
 
 void main() {
   test('동시에 요청한 예문과 최근 조회 결과를 재사용한다', () async {
@@ -161,29 +167,166 @@ void main() {
     expect(restored.imageUrl, word.imageUrl);
   });
 
-  group('AppSettings 알림 간격', () {
-    test('이전 버전 설정에는 매일 간격을 기본 적용한다', () {
+  group('알람 구간', () {
+    Word word(String term, {LearnStatus status = LearnStatus.learning}) => Word(
+      id: term,
+      wordbookId: 'b',
+      term: term,
+      meaning: '$term 뜻',
+      status: status,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    test('이전 버전의 단일 알림 시각을 한 번짜리 구간으로 옮긴다', () {
       final restored = AppSettings.fromMap(const {
         'reminderEnabled': true,
-        'reminderHour': 9,
-        'reminderMinute': 0,
+        'reminderHour': 18,
+        'reminderMinute': 30,
+        'reminderIntervalDays': 7,
       });
-
-      expect(restored.reminderIntervalDays, 1);
+      final schedule = restored.reminderSchedules.single;
+      expect(schedule.startMinutes, 18 * 60 + 30);
+      expect(schedule.slotMinutes, [18 * 60 + 30]);
     });
 
-    test('선택한 알림 간격을 직렬화하고 복원한다', () {
+    test('구간 목록을 직렬화하고 복원한다', () {
       const settings = AppSettings(
-        reminderHour: 18,
-        reminderMinute: 30,
-        reminderIntervalDays: 7,
+        reminderSchedules: [
+          ReminderSchedule(
+            id: 'a',
+            startMinutes: 8 * 60,
+            endMinutes: 10 * 60,
+            intervalMinutes: 30,
+            wordCount: 5,
+          ),
+          ReminderSchedule(
+            id: 'b',
+            enabled: false,
+            startMinutes: 22 * 60,
+            endMinutes: 60,
+            intervalMinutes: 90,
+          ),
+        ],
       );
+      final restored = AppSettings.fromMap(
+        jsonDecode(jsonEncode(settings.toMap())) as Map<String, dynamic>,
+      );
+      expect(restored.reminderSchedules.map((s) => s.toMap()).toList(), [
+        for (final s in settings.reminderSchedules) s.toMap(),
+      ]);
+      expect(restored.reminderSchedules.first.slotMinutes, [
+        480,
+        510,
+        540,
+        570,
+        600,
+      ]);
+      // 자정을 넘는 구간: 22:00, 23:30, 01:00
+      expect(restored.reminderSchedules.last.slotMinutes, [1320, 1410, 60]);
+    });
 
-      final restored = AppSettings.fromMap(settings.toMap());
+    test('알림을 시각 순으로 만들고 단어 수·중복을 반영한다', () {
+      const settings = AppSettings(
+        reminderSchedules: [
+          ReminderSchedule(
+            id: 'a',
+            startMinutes: 11 * 60,
+            endMinutes: 13 * 60,
+            intervalMinutes: 60,
+            wordCount: 2,
+          ),
+          ReminderSchedule(
+            id: 'b',
+            startMinutes: 13 * 60,
+            endMinutes: 13 * 60,
+            wordCount: 3,
+          ),
+          ReminderSchedule(
+            id: 'off',
+            enabled: false,
+            startMinutes: 6 * 60,
+            endMinutes: 6 * 60,
+          ),
+        ],
+      );
+      final words = [
+        word('done', status: LearnStatus.completed),
+        word('a'),
+        word('b'),
+        word('c'),
+      ];
+      final plan = planReminders(settings, words);
+      expect(plan.map((r) => r.minutes), [11 * 60, 12 * 60, 13 * 60]);
+      expect(plan.every((r) => r.daily), isTrue);
+      expect(plan[0].words.map((w) => w.term), ['a', 'b']);
+      expect(plan[1].words.map((w) => w.term), ['c', 'done']);
+      expect(plan[2].words.map((w) => w.term), ['a', 'b', 'c']);
+      expect(plan[0].body(ko), 'a — a 뜻\nb — b 뜻');
+      expect(weeklyReminderCount(settings), 21);
+      expect(
+        planReminders(settings.copyWith(reminderEnabled: false), words),
+        isEmpty,
+      );
+    });
 
-      expect(restored.reminderHour, 18);
-      expect(restored.reminderMinute, 30);
-      expect(restored.reminderIntervalDays, 7);
+    test('체크한 요일에만 보내고 자정을 넘긴 시각은 다음 요일로 옮긴다', () {
+      const settings = AppSettings(
+        reminderSchedules: [
+          ReminderSchedule(
+            id: 'mwf',
+            startMinutes: 9 * 60,
+            endMinutes: 9 * 60,
+            weekdays: [1, 3, 5],
+          ),
+          ReminderSchedule(
+            id: 'fri-night',
+            startMinutes: 23 * 60,
+            endMinutes: 30,
+            intervalMinutes: 90,
+            weekdays: [5],
+          ),
+        ],
+      );
+      final plan = planReminders(settings, const []);
+      expect(plan.map((r) => '${r.minutes}@${r.weekdays.join(',')}'), [
+        '30@6',
+        '540@1,3,5',
+        '1380@5',
+      ]);
+      expect(requiredNotificationCount(settings), 5);
+      expect(weeklyReminderCount(settings), 5);
+      expect(settings.reminderSchedules.first.weekdaysLabel(ko), '월·수·금');
+      expect(
+        ReminderSchedule.fromMap(
+          settings.reminderSchedules.first.toMap(),
+        ).weekdays,
+        [1, 3, 5],
+      );
+      expect(
+        const ReminderSchedule(
+          id: 'x',
+          startMinutes: 0,
+          endMinutes: 0,
+          weekdays: [1, 2, 3, 4, 5],
+        ).weekdaysLabel(ko),
+        '평일',
+      );
+    });
+
+    test('예약 알림 수는 기기 제한 안으로 자른다', () {
+      const settings = AppSettings(
+        reminderSchedules: [
+          ReminderSchedule(
+            id: 'a',
+            startMinutes: 0,
+            endMinutes: 23 * 60 + 45,
+            intervalMinutes: 15,
+          ),
+        ],
+      );
+      expect(requiredNotificationCount(settings), 96);
+      expect(planReminders(settings, const []), hasLength(maxPlannedReminders));
     });
   });
 

@@ -71,7 +71,7 @@ import '../models/wordbook.dart';
         translation: '매출에 상당한 증가가 있었다.',
       ),
     ]),
-    make('approach', '접근하다; 접근법', '동사/명사', '/əˈproʊtʃ/', '', const [
+    make('approach', '접근법, 방법', '명사', '/əˈproʊtʃ/', '', const [
       Example(
         sentence: 'We need a new approach to solve this problem.',
         translation: '이 문제를 해결하려면 새로운 접근법이 필요하다.',

@@ -56,6 +56,7 @@ Future<int> importSharedWordbook(
         wordbookId: created.id,
         group: w.group,
         term: w.term,
+        translationLanguage: w.translationLanguage,
         meanings: w.meanings,
         dictionarySourceTerms: w.dictionarySourceTerms,
         partOfSpeech: w.partOfSpeech,

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../models/word.dart';
+import '../models/translation_language.dart';
 import '../providers.dart';
-import '../services/word_image_picker.dart';
 import '../theme.dart';
-import '../widgets/word_image.dart';
+import '../widgets/panel.dart' show exampleSourceLabel;
+import '../widgets/word_form_section.dart';
 import '../widgets/meaning_fields.dart';
 import '../widgets/dictionary_links.dart';
 import '../widgets/dictionary_lookup.dart';
@@ -55,18 +57,21 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
   late final TextEditingController _phonetic;
   late final FocusNode _termFocus;
   late String _imageUrl;
-  bool _pickingImage = false;
   bool _fetchingExamples = false;
   bool _pendingExamples = false;
   bool _acceptPendingExamples = true;
   bool _examplesChanged = false;
   bool _saving = false;
   late List<_EditableExample> _examples;
+  late TranslationLanguage _translationLanguage;
 
   @override
   void initState() {
     super.initState();
     final w = widget.existing ?? widget.initialDraft;
+    _translationLanguage = w == null
+        ? ref.read(settingsProvider).translationLanguage
+        : TranslationLanguage.fromCode(w.translationLanguage);
     _term = TextEditingController(text: w?.term ?? '');
     _term.addListener(() {
       if (_term.text.trim() != widget.initialDraft?.term.trim()) {
@@ -88,7 +93,6 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     _examples = (w?.examples ?? const <Example>[])
         .map(_EditableExample.fromExample)
         .toList();
-    if (_examples.isEmpty) _addExample();
     if (widget.pendingExamples != null) {
       _pendingExamples = true;
       _finishPendingExamples();
@@ -124,21 +128,14 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     }
   }
 
-  void _addExample() {
-    _examples.add(_EditableExample());
-  }
-
   void _removeExample(int index) {
     _examplesChanged = true;
     final example = _examples[index];
-    if (_examples.length == 1) {
-      example.s.clear();
-      example.t.clear();
-      return;
-    }
-    example.s.dispose();
-    example.t.dispose();
     _examples.removeAt(index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      example.s.dispose();
+      example.t.dispose();
+    });
   }
 
   void _applySuggestion(Word word) {
@@ -165,7 +162,6 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
       example.t.dispose();
     }
     _examples = word.examples.map(_EditableExample.fromExample).toList();
-    if (_examples.isEmpty) _addExample();
     setState(() {});
   }
 
@@ -185,8 +181,10 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           _meanings.add(TextEditingController(text: meaning));
         }
       }
-      if (!_dictionarySourceTerms.contains(selection.term)) {
-        _dictionarySourceTerms.add(selection.term);
+      for (final term in selection.sourceTerms) {
+        if (!_dictionarySourceTerms.contains(term)) {
+          _dictionarySourceTerms.add(term);
+        }
       }
       if (_pos.text.isEmpty) _pos.text = selection.suggestedPartOfSpeech;
     });
@@ -196,9 +194,9 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     final term = _term.text.trim();
     if (term.isEmpty) {
       _termFocus.requestFocus();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('먼저 영어 단어를 입력해 주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.wordEditTermRequired)),
+      );
       return;
     }
     if (_fetchingExamples) return;
@@ -208,7 +206,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     try {
       final fetched = await ref
           .read(exampleSourceServiceProvider)
-          .fetchExamples(term);
+          .fetchExamples(term, translationLanguage: _translationLanguage);
       if (!mounted) return;
 
       final existing = {
@@ -226,8 +224,8 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           SnackBar(
             content: Text(
               fetched.isEmpty
-                  ? "'$term'에 사용할 예문을 찾지 못했습니다."
-                  : '가져온 예문이 모두 이미 추가되어 있습니다.',
+                  ? context.l10n.wordEditNoExamplesFound(term)
+                  : context.l10n.wordEditExamplesAlreadyAdded,
             ),
           ),
         );
@@ -236,19 +234,26 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
 
       final selected = await showDialog<List<Example>>(
         context: context,
-        builder: (context) =>
-            _ExamplePickerDialog(term: term, examples: candidates),
+        builder: (context) => _ExamplePickerDialog(
+          term: term,
+          examples: candidates,
+          language: _translationLanguage,
+        ),
       );
       if (selected == null || selected.isEmpty || !mounted) return;
       _appendExamples(selected);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('예문 ${selected.length}개를 추가했습니다.')),
+        SnackBar(
+          content: Text(context.l10n.wordEditExamplesAdded(selected.length)),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('예문을 가져오지 못했습니다: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.wordEditExamplesFetchFailed('$error')),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _fetchingExamples = false);
     }
@@ -276,26 +281,16 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     });
   }
 
-  Future<void> _pickImage() async {
-    if (_pickingImage) return;
-    setState(() => _pickingImage = true);
-    try {
-      final source = await pickWordImage();
-      if (mounted && source != null) setState(() => _imageUrl = source);
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error is FormatException
-                ? error.message
-                : '이미지를 불러오지 못했습니다: $error',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _pickingImage = false);
-    }
+  Future<void> _addManualExample() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final example = await showDialog<Example>(
+      context: context,
+      builder: (_) => _ManualExampleDialog(language: _translationLanguage),
+    );
+    if (!mounted || example == null || _saving) return;
+    _acceptPendingExamples = false;
+    _pendingExamples = false;
+    _appendExamples([example]);
   }
 
   @override
@@ -318,9 +313,9 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     if (_saving) return;
     final meanings = Word.normalizeMeanings(_meanings.map((c) => c.text));
     if (_term.text.trim().isEmpty || meanings.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('단어와 뜻을 하나 이상 입력해 주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.wordEditTermAndMeaningRequired)),
+      );
       return;
     }
     _acceptPendingExamples = false;
@@ -345,6 +340,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
             id: '',
             wordbookId: widget.wordbookId,
             term: _term.text.trim(),
+            translationLanguage: _translationLanguage.code,
             meanings: meanings,
             dictionarySourceTerms: _dictionarySourceTerms,
             partOfSpeech: _pos.text.trim(),
@@ -371,7 +367,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장하지 못했습니다. 다시 시도해 주세요.')),
+          SnackBar(content: Text(context.l10n.wordEditSaveFailed)),
         );
       }
     } finally {
@@ -386,12 +382,16 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existing == null ? '단어 추가' : '단어 편집'),
+        title: Text(
+          widget.existing == null
+              ? context.l10n.wordAddWord
+              : context.l10n.wordEditWord,
+        ),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
-            child: const Text(
-              '저장',
+            child: Text(
+              context.l10n.commonSave,
               style: TextStyle(
                 color: AppColors.accentDark,
                 fontWeight: FontWeight.bold,
@@ -400,225 +400,239 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (widget.wordbookTitle.isNotEmpty) ...[
-            Text(
-              widget.wordbookTitle,
-              style: const TextStyle(color: AppColors.sub, fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-          ],
-          if (widget.draftNotice != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Text(
-                widget.draftNotice!,
-                style: const TextStyle(color: AppColors.sub, fontSize: 13),
-              ),
-            ),
-          _termField(savedWords),
-          MeaningFields(
-            controllers: _meanings,
-            onAdd: () => setState(() => _meanings.add(TextEditingController())),
-            onRemove: (i) {
-              final removed = _meanings[i];
-              setState(() => _meanings.removeAt(i));
-              WidgetsBinding.instance.addPostFrameCallback(
-                (_) => removed.dispose(),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _term,
-            builder: (_, value, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
-                DictionaryLookupButton(
-                  term: value.text,
-                  meanings: () => _meanings.map((c) => c.text).toList(),
-                  onSelected: _addDictionaryMeanings,
-                ),
-                DictionaryAttribution(terms: _dictionarySourceTerms),
-                DictionaryLinks(term: value.text),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _partOfSpeechField()),
-              const SizedBox(width: 10),
-              Expanded(child: _field(_phonetic, '발음기호', '/ˈhæpi/')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '대표 이미지',
-            style: TextStyle(color: AppColors.sub, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          _imageEditor(),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '예문',
-                  style: TextStyle(
-                    color: AppColors.sub,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _fetchingExamples || _pendingExamples
-                    ? null
-                    : _fetchExternalExamples,
-                icon: _fetchingExamples || _pendingExamples
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.travel_explore_rounded, size: 18),
-                label: Text(
-                  _fetchingExamples || _pendingExamples ? '검색 중' : '예문 가져오기',
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () => setState(() {
-                  _examplesChanged = true;
-                  _addExample();
-                }),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('직접 추가'),
-              ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              '예문을 2개 이상 저장하면 복습할 때마다 자동으로 바뀌어요.',
-              style: TextStyle(color: AppColors.sub, fontSize: 12),
-            ),
-          ),
-          ..._examples.asMap().entries.map((entry) {
-            final i = entry.key;
-            final e = entry.value;
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '예문 ${i + 1}',
-                            style: const TextStyle(
-                              color: AppColors.sub,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: '예문 삭제',
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => setState(() => _removeExample(i)),
-                        ),
-                      ],
-                    ),
-                    TextField(
-                      controller: e.s,
-                      decoration: InputDecoration(
-                        labelText: '영어 문장',
-                        hintText: 'I am happy today.',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: e.t,
-                      decoration: const InputDecoration(
-                        labelText: '해석 (한글)',
-                        hintText: '오늘은 행복해요.',
-                      ),
-                    ),
-                    if (e.source.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerLeft,
+                if (widget.wordbookTitle.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.book_outlined, size: 16, color: AppColors.sub),
+                      const SizedBox(width: 6),
+                      Expanded(
                         child: Text(
-                          '출처: ${e.source}${e.license.isEmpty ? '' : ' · ${e.license}'}',
-                          style: const TextStyle(
-                            color: AppColors.sub,
-                            fontSize: 11,
-                          ),
+                          widget.wordbookTitle,
+                          style: TextStyle(color: AppColors.sub, fontSize: 13),
                         ),
                       ),
                     ],
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (widget.draftNotice?.isNotEmpty ?? false) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      widget.draftNotice!,
+                      style: const TextStyle(fontSize: 12, height: 1.5),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                WordFormSection(
+                  icon: Icons.text_fields_rounded,
+                  title: context.l10n.wordEditSectionTerm,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [_termField(savedWords)],
+                  ),
                 ),
-              ),
-            );
-          }),
-        ],
+                const SizedBox(height: 16),
+                WordFormSection(
+                  icon: Icons.translate_rounded,
+                  title: context.l10n.wordEditSectionMeaning,
+                  trailing: Text(
+                    context.l10n.language(_translationLanguage),
+                    style: TextStyle(color: AppColors.sub, fontSize: 12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      MeaningFields(
+                        controllers: _meanings,
+                        onAdd: () => setState(
+                          () => _meanings.add(TextEditingController()),
+                        ),
+                        onRemove: (i) {
+                          final removed = _meanings[i];
+                          setState(() => _meanings.removeAt(i));
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => removed.dispose(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _partOfSpeechField()),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _field(
+                              _phonetic,
+                              context.l10n.wordEditPhonetic,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _term,
+                        builder: (_, value, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DictionaryLookupButton(
+                              term: value.text,
+                              translationLanguage: _translationLanguage,
+                              meanings: () =>
+                                  _meanings.map((c) => c.text).toList(),
+                              onSelected: _addDictionaryMeanings,
+                            ),
+                            DictionaryAttribution(
+                              terms: _dictionarySourceTerms,
+                            ),
+                            DictionaryLinks(
+                              term: value.text,
+                              language: _translationLanguage,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                WordFormSection(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: context.l10n.wordExamples,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _fetchingExamples || _pendingExamples
+                                ? null
+                                : _fetchExternalExamples,
+                            icon: _fetchingExamples || _pendingExamples
+                                ? const SizedBox.square(
+                                    dimension: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.travel_explore_rounded,
+                                    size: 18,
+                                  ),
+                            label: Text(
+                              _fetchingExamples || _pendingExamples
+                                  ? context.l10n.wordEditSearching
+                                  : context.l10n.wordEditFetchExamples,
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _saving ? null : _addManualExample,
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: Text(context.l10n.wordEditAddManually),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      for (final entry in _examples.asMap().entries)
+                        _exampleCard(entry.key, entry.value),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _imageEditor() {
-    if (_imageUrl.isEmpty) {
-      return OutlinedButton.icon(
-        onPressed: _pickingImage ? null : _pickImage,
-        icon: _pickingImage
-            ? const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.add_photo_alternate_outlined),
-        label: Text(_pickingImage ? '이미지 불러오는 중…' : '이미지 추가'),
-      );
-    }
-
-    return Column(
+  Widget _exampleCard(int index, _EditableExample example) => Container(
+    key: ObjectKey(example),
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.bg,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.line),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: WordImage(
-              source: _imageUrl,
-              width: double.infinity,
-              height: double.infinity,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _pickingImage ? null : _pickImage,
-                icon: const Icon(Icons.swap_horiz),
-                label: const Text('이미지 변경'),
+              child: Text(
+                context.l10n.wordEditExampleNumber(index + 1),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton.outlined(
-              tooltip: '이미지 삭제',
-              onPressed: () => setState(() => _imageUrl = ''),
-              icon: const Icon(Icons.delete_outline),
+            IconButton(
+              tooltip: context.l10n.wordEditDeleteExample,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => setState(() => _removeExample(index)),
             ),
           ],
         ),
+        TextField(
+          controller: example.s,
+          minLines: 1,
+          maxLines: 4,
+          decoration: InputDecoration(labelText: context.l10n.wordEditSentence),
+        ),
+        // 영어(영영)는 해석 칸을 두지 않는다. 이미 있는 해석은 계속 편집할 수 있다.
+        if (_translationLanguage.hasTranslations ||
+            example.t.text.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: example.t,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: context.l10n.wordEditTranslationLabel(
+                context.l10n.language(_translationLanguage),
+              ),
+            ),
+          ),
+        ],
+        if (example.source.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            context.l10n.wordExampleSource(
+              exampleSourceLabel(
+                context,
+                Example(
+                  sentence: example.s.text,
+                  source: example.source,
+                  license: example.license,
+                ),
+              ),
+            ),
+            style: TextStyle(color: AppColors.sub, fontSize: 11),
+          ),
+        ],
       ],
-    );
-  }
+    ),
+  );
 
   Widget _termField(List<Word> savedWords) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -635,6 +649,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
                 .where(
                   (word) =>
                       word.id != widget.existing?.id &&
+                      word.translationLanguage == _translationLanguage.code &&
                       word.term.toLowerCase().startsWith(query),
                 )
                 .toList()
@@ -659,12 +674,11 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
           focusNode: focusNode,
           textInputAction: TextInputAction.next,
           onSubmitted: (_) => onSubmitted(),
-          decoration: const InputDecoration(
-            labelText: '단어 *',
-            hintText: 'happy',
+          decoration: InputDecoration(
+            labelText: context.l10n.wordEditTermLabel,
             suffixIcon: Tooltip(
-              message: '저장된 단어를 선택하면 뜻과 예문을 자동으로 채웁니다.',
-              child: Icon(Icons.auto_awesome_outlined, size: 20),
+              message: context.l10n.wordEditTermHint,
+              child: const Icon(Icons.auto_awesome_outlined, size: 20),
             ),
           ),
         );
@@ -714,11 +728,17 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
       key: ValueKey(_pos.text),
       initialValue: _pos.text,
       isExpanded: true,
-      decoration: const InputDecoration(labelText: '품사'),
+      decoration: InputDecoration(labelText: context.l10n.wordEditPartOfSpeech),
       items: [
-        const DropdownMenuItem(value: '', child: Text('선택 안 함')),
+        DropdownMenuItem(
+          value: '',
+          child: Text(context.l10n.wordEditPartOfSpeechNone),
+        ),
         for (final part in _partsOfSpeech)
-          DropdownMenuItem(value: part, child: Text(part)),
+          DropdownMenuItem(
+            value: part,
+            child: Text(context.l10n.partOfSpeech(part)),
+          ),
         if (_pos.text.isNotEmpty && !_partsOfSpeech.contains(_pos.text))
           DropdownMenuItem(value: _pos.text, child: Text(_pos.text)),
       ],
@@ -726,11 +746,11 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     ),
   );
 
-  Widget _field(TextEditingController c, String label, String hint) => Padding(
+  Widget _field(TextEditingController c, String label) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextField(
       controller: c,
-      decoration: InputDecoration(labelText: label, hintText: hint),
+      decoration: InputDecoration(labelText: label),
     ),
   );
 }
@@ -764,11 +784,100 @@ class _EditableExample {
   );
 }
 
+class _ManualExampleDialog extends StatefulWidget {
+  final TranslationLanguage language;
+  const _ManualExampleDialog({required this.language});
+
+  @override
+  State<_ManualExampleDialog> createState() => _ManualExampleDialogState();
+}
+
+class _ManualExampleDialogState extends State<_ManualExampleDialog> {
+  final _sentence = TextEditingController();
+  final _translation = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _sentence.dispose();
+    _translation.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      Example(
+        sentence: _sentence.text.trim(),
+        translation: _translation.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+    title: Text(context.l10n.wordEditManualExampleTitle),
+    scrollable: true,
+    content: SizedBox(
+      width: 480,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _sentence,
+              autofocus: true,
+              minLines: 3,
+              maxLines: 6,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: context.l10n.wordEditSentenceRequiredLabel,
+              ),
+              validator: (value) => (value ?? '').trim().isEmpty
+                  ? context.l10n.wordEditSentenceRequired
+                  : null,
+            ),
+            if (widget.language.hasTranslations) ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _translation,
+                minLines: 2,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: context.l10n.wordEditTranslationLabel(
+                    context.l10n.language(widget.language),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+    actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text(context.l10n.commonCancel),
+      ),
+      ElevatedButton(onPressed: _submit, child: Text(context.l10n.commonAdd)),
+    ],
+  );
+}
+
 class _ExamplePickerDialog extends StatefulWidget {
   final String term;
   final List<Example> examples;
+  final TranslationLanguage language;
 
-  const _ExamplePickerDialog({required this.term, required this.examples});
+  const _ExamplePickerDialog({
+    required this.term,
+    required this.examples,
+    required this.language,
+  });
 
   @override
   State<_ExamplePickerDialog> createState() => _ExamplePickerDialogState();
@@ -793,12 +902,12 @@ class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "'${widget.term}' 예문",
+                context.l10n.wordEditPickerTitle(widget.term),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 6),
-              const Text(
-                '추가할 예문을 선택하세요. 번역이 없는 문장은 직접 입력할 수 있어요.',
+              Text(
+                context.l10n.wordEditPickerDescription,
                 style: TextStyle(color: AppColors.sub, fontSize: 12),
               ),
               const SizedBox(height: 12),
@@ -818,10 +927,14 @@ class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
                         style: const TextStyle(fontSize: 14),
                       ),
                       subtitle: example.translation.isEmpty
-                          ? const Text(
-                              '한국어 번역 없음',
-                              style: TextStyle(fontSize: 12),
-                            )
+                          ? !widget.language.hasTranslations
+                                ? null
+                                : Text(
+                                    context.l10n.wordEditNoTranslation(
+                                      context.l10n.language(widget.language),
+                                    ),
+                                    style: const TextStyle(fontSize: 12),
+                                  )
                           : Text(
                               example.translation,
                               style: const TextStyle(fontSize: 12),
@@ -838,8 +951,8 @@ class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                '예문 출처: Tatoeba · CC BY 2.0 FR',
+              Text(
+                context.l10n.wordEditPickerAttribution,
                 style: TextStyle(color: AppColors.sub, fontSize: 11),
               ),
               const SizedBox(height: 14),
@@ -848,7 +961,7 @@ class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('취소'),
+                      child: Text(context.l10n.commonCancel),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -860,7 +973,11 @@ class _ExamplePickerDialogState extends State<_ExamplePickerDialog> {
                               for (var i = 0; i < widget.examples.length; i++)
                                 if (_selected.contains(i)) widget.examples[i],
                             ]),
-                      child: Text('선택한 예문 추가 (${_selected.length})'),
+                      child: Text(
+                        context.l10n.wordEditAddSelectedExamples(
+                          _selected.length,
+                        ),
+                      ),
                     ),
                   ),
                 ],

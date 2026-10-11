@@ -16,7 +16,7 @@
 
 ## 1. Supabase 프로젝트 생성
 1. https://supabase.com 접속 → **New project**
-2. 프로젝트 이름(예: `wordcloud-vocab`)·DB 비밀번호·리전 선택
+2. 프로젝트 이름(예: `sentence-vocab`)·DB 비밀번호·리전 선택
 3. 생성 후 **Project Settings → API** 에서 다음을 복사:
    - **Project URL** (`https://xxxx.supabase.co`)
    - **anon / publishable key** (`eyJhbGciOi...`)

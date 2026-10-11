@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
 import '../providers.dart';
+import '../models/translation_language.dart';
 import '../services/dictionary_service.dart';
 import '../theme.dart';
 
@@ -10,6 +12,10 @@ class DictionarySelection {
   final String term;
   final List<DictionarySense> senses;
   const DictionarySelection(this.term, this.senses);
+
+  /// 고른 뜻의 출처. 내장 언어판 사전 뜻은 'ko:take' 형식으로 남는다.
+  List<String> get sourceTerms =>
+      {for (final sense in senses) sense.sourceTerm(term)}.toList();
 
   String get suggestedPartOfSpeech {
     final parts = senses.map((sense) => sense.partOfSpeechLabel).toSet();
@@ -21,12 +27,14 @@ class DictionaryLookupButton extends StatelessWidget {
   final String term;
   final List<String> Function() meanings;
   final Future<void> Function(DictionarySelection) onSelected;
+  final TranslationLanguage? translationLanguage;
 
   const DictionaryLookupButton({
     super.key,
     required this.term,
     required this.meanings,
     required this.onSelected,
+    this.translationLanguage,
   });
 
   @override
@@ -39,8 +47,11 @@ class DictionaryLookupButton extends StatelessWidget {
               FocusManager.instance.primaryFocus?.unfocus();
               final selected = await showDialog<DictionarySelection>(
                 context: context,
-                builder: (_) =>
-                    _DictionaryDialog(term: term.trim(), meanings: meanings()),
+                builder: (_) => _DictionaryDialog(
+                  term: term.trim(),
+                  meanings: meanings(),
+                  language: translationLanguage,
+                ),
               );
               if (selected == null || !context.mounted) return;
               try {
@@ -48,13 +59,13 @@ class DictionaryLookupButton extends StatelessWidget {
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('뜻을 추가하지 못했어요. 다시 시도해 주세요.')),
+                    SnackBar(content: Text(context.l10n.dictLookupAddFailed)),
                   );
                 }
               }
             },
       icon: const Icon(Icons.menu_book_outlined, size: 18),
-      label: const Text('사전 뜻 보기'),
+      label: Text(context.l10n.dictLookupButton),
     ),
   );
 }
@@ -62,7 +73,12 @@ class DictionaryLookupButton extends StatelessWidget {
 class _DictionaryDialog extends ConsumerStatefulWidget {
   final String term;
   final List<String> meanings;
-  const _DictionaryDialog({required this.term, required this.meanings});
+  final TranslationLanguage? language;
+  const _DictionaryDialog({
+    required this.term,
+    required this.meanings,
+    this.language,
+  });
 
   @override
   ConsumerState<_DictionaryDialog> createState() => _DictionaryDialogState();
@@ -72,17 +88,24 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
   late Future<DictionaryResult> _lookup;
   DictionaryResult? _result;
   final _selected = <int>{};
+  late final TranslationLanguage _language;
 
   @override
   void initState() {
     super.initState();
-    _lookup = ref.read(dictionaryServiceProvider).lookup(widget.term);
+    _language =
+        widget.language ?? ref.read(settingsProvider).translationLanguage;
+    _lookup = ref
+        .read(dictionaryServiceProvider)
+        .lookup(widget.term, translationLanguage: _language);
   }
 
   void _retry() => setState(() {
     _selected.clear();
     _result = null;
-    _lookup = ref.read(dictionaryServiceProvider).lookup(widget.term);
+    _lookup = ref
+        .read(dictionaryServiceProvider)
+        .lookup(widget.term, translationLanguage: _language);
   });
 
   @override
@@ -107,14 +130,18 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${widget.term} · 사전 뜻',
+                context.l10n.dictLookupTitle(widget.term),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 6),
-              const Text(
-                '한국어 뜻이 없는 항목은 영어 풀이로 표시해요.',
-                style: TextStyle(color: AppColors.sub, fontSize: 12),
-              ),
+              if (_language.hasTranslations) ...[
+                const SizedBox(height: 6),
+                Text(
+                  context.l10n.dictLookupFallbackNotice(
+                    context.l10n.language(_language),
+                  ),
+                  style: TextStyle(color: AppColors.sub, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 12),
               Flexible(
                 child: FutureBuilder<DictionaryResult>(
@@ -137,11 +164,11 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                             Text(
                               error is DictionaryLookupException
                                   ? error.message
-                                  : '사전 뜻을 불러오지 못했어요.',
+                                  : context.l10n.dictLookupLoadFailed,
                             ),
                             TextButton(
                               onPressed: _retry,
-                              child: const Text('다시 시도'),
+                              child: Text(context.l10n.commonRetry),
                             ),
                             const SizedBox(height: 20),
                           ],
@@ -151,11 +178,9 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                     final result = snapshot.requireData;
                     _result = result;
                     if (result.senses.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          '사전에 등록된 뜻을 찾지 못했어요.\n철자를 확인하거나 다른 사전에서 찾아보세요.',
-                        ),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(context.l10n.dictLookupNoResults),
                       );
                     }
                     return ListView.separated(
@@ -186,10 +211,13 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                             children: [
                               Text(
                                 [
-                                  sense.partOfSpeechLabel,
-                                  if (saved) '추가됨',
+                                  context.l10n.partOfSpeech(
+                                    sense.partOfSpeechLabel,
+                                  ),
+                                  if (saved)
+                                    context.l10n.dictLookupAlreadyAdded,
                                 ].where((s) => s.isNotEmpty).join(' · '),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppColors.sub,
                                   fontSize: 12,
                                 ),
@@ -201,13 +229,16 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                               ),
                             ],
                           ),
-                          subtitle: sense.korean.isEmpty
+                          // 내장 사전 뜻은 영어 풀이가 없다.
+                          subtitle:
+                              sense.translations.isEmpty ||
+                                  sense.definition.isEmpty
                               ? null
                               : Padding(
                                   padding: const EdgeInsets.only(top: 5),
                                   child: Text(
                                     sense.definition,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppColors.sub,
                                       fontSize: 12,
                                     ),
@@ -226,7 +257,7 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('닫기'),
+                    child: Text(context.l10n.commonClose),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -237,7 +268,7 @@ class _DictionaryDialogState extends ConsumerState<_DictionaryDialog> {
                               context,
                               DictionarySelection(widget.term, selected),
                             ),
-                      child: Text('선택한 뜻 추가 ($count)'),
+                      child: Text(context.l10n.dictLookupAddSelected(count)),
                     ),
                   ),
                 ],
@@ -278,26 +309,39 @@ class DictionaryAttribution extends StatelessWidget {
           /* Show the same message for unsupported launchers. */
         }
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('사전 링크를 열지 못했어요.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.dictLookupLinkFailed)),
+          );
         }
       },
       child: Text(label),
     );
+    // 'ko:take'는 한국어판 Wiktionary(내장 사전), 'take'는 영어판(온라인 사전).
+    final sources = [
+      for (final term in terms.toSet())
+        switch (RegExp(r'^([a-z]{2}):(.+)$').firstMatch(term)) {
+          final m? => (edition: m.group(1)!, term: m.group(2)!),
+          null => (edition: 'en', term: term),
+        },
+    ];
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        for (final term in terms.toSet())
+        for (final source in sources)
           link(
-            'Wiktionary · $term',
+            source.edition == 'en'
+                ? 'Wiktionary · ${source.term}'
+                : 'Wiktionary (${source.edition}) · ${source.term}',
             Uri(
               scheme: 'https',
-              host: 'en.wiktionary.org',
-              pathSegments: ['wiki', term],
+              host: '${source.edition}.wiktionary.org',
+              pathSegments: ['wiki', source.term],
             ),
           ),
-        link('FreeDictionaryAPI.com', Uri.https('freedictionaryapi.com')),
+        if (sources.any((s) => s.edition == 'en'))
+          link('FreeDictionaryAPI.com', Uri.https('freedictionaryapi.com')),
+        if (sources.any((s) => s.edition != 'en'))
+          link('Kaikki.org', Uri.https('kaikki.org')),
         link(
           'CC BY-SA 4.0',
           Uri.https('creativecommons.org', '/licenses/by-sa/4.0/'),
