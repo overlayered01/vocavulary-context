@@ -21,17 +21,22 @@ enum ReviewMode {
   /// 예문 빈칸 채우기 — 4개 보기 중 고르는 객관식. 예문이 있는 카드만.
   choice,
 
-  /// 뜻 보고 단어 고르기. 예문 없이 모든 카드.
+  /// 뜻 보고 단어 맞추기. 예문 없이 모든 카드. 답 방식은 설정을 따른다.
   meaning,
 
-  /// 홈의 시작: 예문이 있으면 빈칸, 없으면 뜻을 보고 고른다.
+  /// 홈의 시작: 예문이 있으면 빈칸, 없으면 뜻을 보고 맞춘다. 답 방식은 설정을 따른다.
   mixed;
 
   /// 예문이 있는 카드만 내는 방식.
   bool get examplesOnly => this == input || this == choice;
 
-  /// 4개 보기 중 고르는 방식.
-  bool get usesChoices => this != input;
+  /// 보기 4개 중 고르는지. [input]·[choice]는 정해져 있고 나머지는 설정
+  /// ([answerByChoice])을 따른다. 기본은 직접 쓰기.
+  bool usesChoices({bool answerByChoice = false}) => switch (this) {
+    input => false,
+    choice => true,
+    meaning || mixed => answerByChoice,
+  };
 }
 
 /// 예문 중심 복습 화면. 정답을 확인하면 같은 카드 위에서 단어가 채워지고,
@@ -94,7 +99,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         for (final word in session)
           mode == ReviewMode.meaning ? -1 : ReviewExamples.initialIndex(word),
       ];
-      if (mode.usesChoices) {
+      if (_useChoices) {
         _choices = _buildChoices(session, all);
       }
       _loading = false;
@@ -127,6 +132,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     _input.dispose();
     super.dispose();
   }
+
+  /// 이번 복습에서 보기 중 고르는지 (설정의 문제 방식 반영).
+  late final bool _useChoices = widget.mode.usesChoices(
+    answerByChoice: ref.read(settingsProvider).answerByChoice,
+  );
 
   Word get _current => _session[_index];
 
@@ -273,14 +283,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                           revealed: _revealed,
                         ),
                         const SizedBox(height: 18),
-                        if (!_revealed && widget.mode.usesChoices)
+                        if (!_revealed && _useChoices)
                           _ChoiceGrid(
                             options: _choices[_index],
                             picked: _picked,
                             pickedCorrect: _pickedCorrect,
                             onPick: _pick,
                           ),
-                        if (!_revealed && !widget.mode.usesChoices)
+                        if (!_revealed && !_useChoices)
                           _AnswerInput(
                             controller: _input,
                             onSubmit: () =>
@@ -329,7 +339,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                             ),
                           ],
                         )
-                      : widget.mode.usesChoices
+                      : _useChoices
                       ? PanelOutlineButton(
                           key: const ValueKey('dont-know'),
                           label: l10n.reviewDontKnow,

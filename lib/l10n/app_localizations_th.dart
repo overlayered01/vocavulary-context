@@ -104,6 +104,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'determiner': 'ตัวกำหนด',
       'phrasalVerb': 'กริยาวลี',
       'idiom': 'สำนวน',
+      'phrase': 'วลี',
       'other': '$value',
     });
     return '$_temp0';
@@ -865,14 +866,14 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => 'การแจ้งเตือนทบทวน';
+  String get notificationChannelName => 'แจ้งเตือนคำศัพท์';
 
   @override
   String get notificationChannelDescription =>
-      'แจ้งเตือนให้ทบทวนคำศัพท์ตามวันและเวลาที่คุณเลือก';
+      'แสดงคำศัพท์และความหมายเป็นการแจ้งเตือนตามวันและเวลาที่ตั้งไว้';
 
   @override
-  String get notificationTitleDefault => 'ถึงเวลาทบทวนแล้ว';
+  String get notificationTitleDefault => 'คำศัพท์วันนี้';
 
   @override
   String notificationTitleWords(int count) {
@@ -886,7 +887,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get notificationBodyDefault =>
-      'คำศัพท์วันนี้รอคุณอยู่ แตะเพื่อเริ่มเรียน!';
+      'เพิ่มคำศัพท์แล้วคำและความหมายจะแสดงที่นี่';
 
   @override
   String homeError(String error) {
@@ -929,10 +930,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get homeQuickStart => 'เริ่มด่วน';
 
   @override
-  String get homeQuickGuessWord => 'ทายคำจากตัวอย่าง';
+  String get homeQuickGuessWord => 'เติมคำ · พิมพ์';
 
   @override
-  String get homeQuickFillBlank => 'เติมคำในช่องว่าง';
+  String get homeQuickFillBlank => 'เติมคำ · เลือก';
 
   @override
   String get homeQuickBrowseWordbooks => 'ดูสมุดคำศัพท์';
@@ -1099,12 +1100,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return 'วันนี้ $count ใบ';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return 'ใหม่ $fresh · ทบทวน $review';
+    return 'ทบทวนวันนี้ $count ใบ';
   }
 
   @override
@@ -1259,7 +1255,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get settingsReviewSection => 'ทบทวน';
 
   @override
-  String get settingsSessionSize => 'การ์ดต่อรอบ';
+  String get settingsSessionSize => 'จำนวนการ์ดต่อการทบทวน';
 
   @override
   String get settingsMixLabel => 'ผสมการ์ดที่ทิ้งกลับมา';
@@ -1276,7 +1272,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get settingsNotificationsSection => 'การแจ้งเตือน';
 
   @override
-  String get settingsReminderMaster => 'แจ้งเตือนทบทวน';
+  String get settingsReminderMaster => 'แจ้งเตือนคำศัพท์';
 
   @override
   String get settingsAddSlot => 'ช่วงเวลาแจ้งเตือน';
@@ -1323,6 +1319,9 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get settingsAbout => 'ข้อมูล · แหล่งที่มา';
+
+  @override
+  String get settingsPrivacy => 'นโยบายความเป็นส่วนตัว';
 
   @override
   String get aboutDataSources => 'แหล่งข้อมูล';
@@ -1443,9 +1442,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get wordScanGallery => 'เลือกจากอัลบั้ม';
 
   @override
-  String get wordScanPick => 'เลือกประโยค';
-
-  @override
   String get wordScanFailed => 'อ่านข้อความในรูปไม่ได้';
 
   @override
@@ -1455,4 +1451,39 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => 'รูปของฉัน';
+
+  @override
+  String wordScanAdded(int count) {
+    return 'เพิ่ม $count ประโยคจากรูปแล้ว';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return 'ใหม่ $fresh · ทบทวน $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => 'รูปแบบคำตอบ';
+
+  @override
+  String get settingsAnswerInput => 'พิมพ์คำเอง';
+
+  @override
+  String get settingsAnswerChoice => 'เลือกจาก 4 ตัวเลือก';
+
+  @override
+  String get settingsAnswerHelp => 'ใช้เมื่อทบทวนด้วยปุ่มเริ่มที่หน้าหลัก';
+
+  @override
+  String get sampleWelcomeMeaning => 'ยินดีต้อนรับ';
+
+  @override
+  String get sampleWelcomeExample1 => 'ยินดีต้อนรับสู่ Vocab with Examples!';
+
+  @override
+  String get sampleWelcomeExample2 => 'ยินดีต้อนรับกลับมาทุกคน';
+
+  @override
+  String get homeAddCardHint =>
+      'พิมพ์คำภาษาอังกฤษ แล้วเราจะหาความหมายและตัวอย่างมาทำเป็นการ์ด';
 }

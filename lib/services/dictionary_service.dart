@@ -56,7 +56,9 @@ class DictionarySense {
         'interjection': '감탄사',
         'article': '관사',
         'determiner': '한정사',
-        'phrase': '숙어',
+        'phrase': '구',
+        'idiom': '숙어',
+        'phrasal verb': '구동사',
       }[partOfSpeech] ??
       partOfSpeech;
 }

@@ -267,10 +267,13 @@ class _WordbookCard extends ConsumerWidget {
                           value: 'rename',
                           child: Text(l10n.wordbooksMenuRename),
                         ),
-                        PopupMenuItem(
-                          value: 'share',
-                          child: Text(l10n.wordbooksShareSettings),
-                        ),
+                        // 공유는 클라우드 모드 전용. 로컬 모드에서는 로그인 경로가
+                        // 없으므로 메뉴 자체를 숨긴다.
+                        if (ref.read(repositoryProvider).isCloud)
+                          PopupMenuItem(
+                            value: 'share',
+                            child: Text(l10n.wordbooksShareSettings),
+                          ),
                         PopupMenuItem(
                           value: 'delete',
                           child: Text(l10n.wordbooksMenuDelete),

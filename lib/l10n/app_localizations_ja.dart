@@ -104,6 +104,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'determiner': '限定詞',
       'phrasalVerb': '句動詞',
       'idiom': '熟語',
+      'phrase': '句',
       'other': '$value',
     });
     return '$_temp0';
@@ -836,13 +837,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => '復習リマインダー';
+  String get notificationChannelName => '単語の通知';
 
   @override
-  String get notificationChannelDescription => '設定した曜日・時間帯に届く単語の復習リマインダー';
+  String get notificationChannelDescription => '設定した曜日・時間帯に単語と意味を通知で表示します';
 
   @override
-  String get notificationTitleDefault => '復習の時間です';
+  String get notificationTitleDefault => '今日の単語';
 
   @override
   String notificationTitleWords(int count) {
@@ -855,7 +856,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get notificationBodyDefault => '今日覚える単語が待っています。タップしてすぐ学習しましょう！';
+  String get notificationBodyDefault => '単語を追加すると、ここに単語と意味が表示されます。';
 
   @override
   String homeError(String error) {
@@ -898,10 +899,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeQuickStart => 'クイックスタート';
 
   @override
-  String get homeQuickGuessWord => '例文から単語を当てる';
+  String get homeQuickGuessWord => '空欄補充・入力';
 
   @override
-  String get homeQuickFillBlank => '例文の穴埋め';
+  String get homeQuickFillBlank => '空欄補充・選択';
 
   @override
   String get homeQuickBrowseWordbooks => '単語帳を見る';
@@ -1065,12 +1066,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return '今日 $count枚';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return '新規 $fresh · 復習 $review';
+    return '今日の復習 $count枚';
   }
 
   @override
@@ -1224,7 +1220,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsReviewSection => '復習';
 
   @override
-  String get settingsSessionSize => '1回に出すカード';
+  String get settingsSessionSize => '1回に復習するカード数';
 
   @override
   String get settingsMixLabel => '捨てたカードを混ぜる';
@@ -1241,7 +1237,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsNotificationsSection => '通知';
 
   @override
-  String get settingsReminderMaster => '復習の通知';
+  String get settingsReminderMaster => '単語の通知';
 
   @override
   String get settingsAddSlot => '通知の時間帯';
@@ -1288,6 +1284,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAbout => '情報 · 出典';
+
+  @override
+  String get settingsPrivacy => 'プライバシーポリシー';
 
   @override
   String get aboutDataSources => 'データの出典';
@@ -1408,9 +1407,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get wordScanGallery => 'アルバムから選ぶ';
 
   @override
-  String get wordScanPick => '取り込む文を選択';
-
-  @override
   String get wordScanFailed => '写真の文字を読み取れませんでした';
 
   @override
@@ -1420,4 +1416,38 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => '自分の写真';
+
+  @override
+  String wordScanAdded(int count) {
+    return '写真から$count文を取り込みました';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return '新規 $fresh · 復習 $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => '出題方式';
+
+  @override
+  String get settingsAnswerInput => '空欄に入力';
+
+  @override
+  String get settingsAnswerChoice => '4択から選ぶ';
+
+  @override
+  String get settingsAnswerHelp => 'ホームの「スタート」で復習するときの出題方式です。';
+
+  @override
+  String get sampleWelcomeMeaning => 'ようこそ、いらっしゃい';
+
+  @override
+  String get sampleWelcomeExample1 => 'Vocab with Examplesへようこそ！';
+
+  @override
+  String get sampleWelcomeExample2 => 'みんな、おかえりなさい。';
+
+  @override
+  String get homeAddCardHint => '英単語を入力すると、意味と例文を探してカードにします';
 }

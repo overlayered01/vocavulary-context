@@ -104,6 +104,7 @@ class AppLocalizationsId extends AppLocalizations {
       'determiner': 'Determiner',
       'phrasalVerb': 'Phrasal verb',
       'idiom': 'Idiom',
+      'phrase': 'Frasa',
       'other': '$value',
     });
     return '$_temp0';
@@ -878,14 +879,14 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => 'Pengingat ulasan';
+  String get notificationChannelName => 'Notifikasi kata';
 
   @override
   String get notificationChannelDescription =>
-      'Pengingat untuk mengulas kata pada hari dan jam pilihanmu';
+      'Menampilkan kata dan artinya sebagai notifikasi pada hari dan jam pilihan';
 
   @override
-  String get notificationTitleDefault => 'Waktunya mengulas';
+  String get notificationTitleDefault => 'Kata hari ini';
 
   @override
   String notificationTitleWords(int count) {
@@ -899,7 +900,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get notificationBodyDefault =>
-      'Kata-kata hari ini menunggumu. Ketuk untuk mulai belajar!';
+      'Tambahkan kata dan kata beserta artinya akan muncul di sini.';
 
   @override
   String homeError(String error) {
@@ -942,10 +943,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get homeQuickStart => 'Mulai cepat';
 
   @override
-  String get homeQuickGuessWord => 'Tebak kata dari contoh';
+  String get homeQuickGuessWord => 'Isi kosong · ketik';
 
   @override
-  String get homeQuickFillBlank => 'Isi bagian kosong';
+  String get homeQuickFillBlank => 'Isi kosong · pilih';
 
   @override
   String get homeQuickBrowseWordbooks => 'Lihat buku kata';
@@ -1117,12 +1118,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return '$count hari ini';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return 'Baru $fresh · Ulang $review';
+    return '$count untuk diulang hari ini';
   }
 
   @override
@@ -1277,7 +1273,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsReviewSection => 'Ulangan';
 
   @override
-  String get settingsSessionSize => 'Kartu per sesi';
+  String get settingsSessionSize => 'Kartu per sesi ulang';
 
   @override
   String get settingsMixLabel => 'Campur kartu dibuang';
@@ -1294,7 +1290,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsNotificationsSection => 'Pengingat';
 
   @override
-  String get settingsReminderMaster => 'Pengingat ulangan';
+  String get settingsReminderMaster => 'Notifikasi kata';
 
   @override
   String get settingsAddSlot => 'Rentang pengingat';
@@ -1341,6 +1337,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsAbout => 'Tentang · sumber';
+
+  @override
+  String get settingsPrivacy => 'Kebijakan privasi';
 
   @override
   String get aboutDataSources => 'Sumber data';
@@ -1461,9 +1460,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get wordScanGallery => 'Pilih dari galeri';
 
   @override
-  String get wordScanPick => 'Pilih kalimat';
-
-  @override
   String get wordScanFailed => 'Tidak dapat membaca teks di foto';
 
   @override
@@ -1473,4 +1469,40 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => 'Foto saya';
+
+  @override
+  String wordScanAdded(int count) {
+    return '$count kalimat ditambahkan dari foto';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return 'Baru $fresh · Ulang $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => 'Cara menjawab';
+
+  @override
+  String get settingsAnswerInput => 'Ketik kata';
+
+  @override
+  String get settingsAnswerChoice => 'Pilih dari 4 pilihan';
+
+  @override
+  String get settingsAnswerHelp =>
+      'Dipakai saat mengulang dengan Mulai di beranda.';
+
+  @override
+  String get sampleWelcomeMeaning => 'selamat datang';
+
+  @override
+  String get sampleWelcomeExample1 => 'Selamat datang di Vocab with Examples!';
+
+  @override
+  String get sampleWelcomeExample2 => 'Selamat datang kembali, semuanya.';
+
+  @override
+  String get homeAddCardHint =>
+      'Ketik kata bahasa Inggris, arti dan contohnya dicarikan untuk kartu baru';
 }

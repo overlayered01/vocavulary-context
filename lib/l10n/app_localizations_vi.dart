@@ -104,6 +104,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'determiner': 'Từ hạn định',
       'phrasalVerb': 'Cụm động từ',
       'idiom': 'Thành ngữ',
+      'phrase': 'Cụm từ',
       'other': '$value',
     });
     return '$_temp0';
@@ -858,14 +859,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => 'Nhắc nhở ôn tập';
+  String get notificationChannelName => 'Thông báo từ vựng';
 
   @override
   String get notificationChannelDescription =>
-      'Nhắc ôn từ vựng vào ngày và giờ bạn đã chọn';
+      'Hiển thị từ và nghĩa dưới dạng thông báo vào ngày giờ đã chọn';
 
   @override
-  String get notificationTitleDefault => 'Đến giờ ôn bài rồi';
+  String get notificationTitleDefault => 'Từ vựng hôm nay';
 
   @override
   String notificationTitleWords(int count) {
@@ -878,8 +879,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get notificationBodyDefault =>
-      'Các từ của hôm nay đang chờ bạn. Nhấn để bắt đầu học ngay!';
+  String get notificationBodyDefault => 'Thêm từ để từ và nghĩa hiện ở đây.';
 
   @override
   String homeError(String error) {
@@ -922,10 +922,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get homeQuickStart => 'Bắt đầu nhanh';
 
   @override
-  String get homeQuickGuessWord => 'Đoán từ qua ví dụ';
+  String get homeQuickGuessWord => 'Điền chỗ trống · gõ';
 
   @override
-  String get homeQuickFillBlank => 'Điền vào chỗ trống';
+  String get homeQuickFillBlank => 'Điền chỗ trống · chọn';
 
   @override
   String get homeQuickBrowseWordbooks => 'Xem sổ từ';
@@ -1093,12 +1093,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return 'Hôm nay $count thẻ';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return 'Mới $fresh · Ôn $review';
+    return 'Hôm nay ôn $count thẻ';
   }
 
   @override
@@ -1253,7 +1248,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsReviewSection => 'Ôn tập';
 
   @override
-  String get settingsSessionSize => 'Số thẻ mỗi lần';
+  String get settingsSessionSize => 'Số thẻ mỗi lần ôn';
 
   @override
   String get settingsMixLabel => 'Trộn lại thẻ đã bỏ';
@@ -1270,7 +1265,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsNotificationsSection => 'Nhắc nhở';
 
   @override
-  String get settingsReminderMaster => 'Nhắc ôn tập';
+  String get settingsReminderMaster => 'Thông báo từ vựng';
 
   @override
   String get settingsAddSlot => 'Khung giờ nhắc';
@@ -1317,6 +1312,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get settingsAbout => 'Thông tin · nguồn';
+
+  @override
+  String get settingsPrivacy => 'Chính sách quyền riêng tư';
 
   @override
   String get aboutDataSources => 'Nguồn dữ liệu';
@@ -1437,9 +1435,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get wordScanGallery => 'Chọn từ thư viện';
 
   @override
-  String get wordScanPick => 'Chọn câu';
-
-  @override
   String get wordScanFailed => 'Không đọc được chữ trong ảnh';
 
   @override
@@ -1449,4 +1444,41 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => 'Ảnh của tôi';
+
+  @override
+  String wordScanAdded(int count) {
+    return 'Đã thêm $count câu từ ảnh';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return 'Mới $fresh · Ôn $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => 'Cách trả lời';
+
+  @override
+  String get settingsAnswerInput => 'Tự gõ từ';
+
+  @override
+  String get settingsAnswerChoice => 'Chọn 1 trong 4';
+
+  @override
+  String get settingsAnswerHelp =>
+      'Dùng khi ôn bằng nút Bắt đầu ở màn hình chính.';
+
+  @override
+  String get sampleWelcomeMeaning => 'chào mừng';
+
+  @override
+  String get sampleWelcomeExample1 =>
+      'Chào mừng bạn đến với Vocab with Examples!';
+
+  @override
+  String get sampleWelcomeExample2 => 'Chào mừng mọi người trở lại.';
+
+  @override
+  String get homeAddCardHint =>
+      'Nhập từ tiếng Anh để tìm nghĩa và ví dụ, tạo thành thẻ';
 }

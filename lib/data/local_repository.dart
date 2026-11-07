@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:uuid/uuid.dart';
+import '../l10n/l10n.dart';
+import '../models/app_settings.dart';
 import '../models/study_log.dart';
 import '../models/word.dart';
 import '../models/wordbook.dart';
@@ -33,8 +36,15 @@ class LocalRepository implements VocabRepository {
     }
   }
 
+  /// 기본 단어장(Default)과 welcome 한 단어. 뜻·해석은 번역 언어로 쓴다.
   Future<void> _seedSampleData() async {
-    final (wb, words) = buildSampleData(_uuid.v4, () => _uuid.v4());
+    final language = (await AppSettings.load(_prefs)).translationLanguage;
+    final (wb, words) = buildSampleData(
+      _uuid.v4,
+      () => _uuid.v4(),
+      l10n: l10nFor(Locale(language.code)),
+      translationLanguage: language.code,
+    );
     await _saveWordbooks([wb]);
     await _saveWords(wb.id, words);
   }

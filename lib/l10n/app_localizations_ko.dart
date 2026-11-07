@@ -103,7 +103,8 @@ class AppLocalizationsKo extends AppLocalizations {
       'article': '관사',
       'determiner': '한정사',
       'phrasalVerb': '구동사',
-      'idiom': '숙어',
+      'idiom': '관용구',
+      'phrase': '구',
       'other': '$value',
     });
     return '$_temp0';
@@ -819,13 +820,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => '복습 알림';
+  String get notificationChannelName => '단어 알림';
 
   @override
-  String get notificationChannelDescription => '설정한 요일·시간대에 보내는 단어 복습 알림';
+  String get notificationChannelDescription => '설정한 요일·시간대에 단어와 뜻을 알림으로 보여 줘요';
 
   @override
-  String get notificationTitleDefault => '복습 시간이에요';
+  String get notificationTitleDefault => '오늘의 단어';
 
   @override
   String notificationTitleWords(int count) {
@@ -833,7 +834,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get notificationBodyDefault => '오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!';
+  String get notificationBodyDefault => '단어를 추가하면 여기에 단어와 뜻을 보여 드려요.';
 
   @override
   String homeError(String error) {
@@ -876,10 +877,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeQuickStart => '빠른 시작';
 
   @override
-  String get homeQuickGuessWord => '예문 보고 단어 맞추기';
+  String get homeQuickGuessWord => '빈칸 채우기 · 직접 쓰기';
 
   @override
-  String get homeQuickFillBlank => '예문 빈칸 채우기';
+  String get homeQuickFillBlank => '빈칸 채우기 · 보기 고르기';
 
   @override
   String get homeQuickBrowseWordbooks => '단어장 둘러보기';
@@ -1043,12 +1044,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return '오늘 $count장';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return '신규 $fresh · 복습 $review';
+    return '오늘 복습 $count장';
   }
 
   @override
@@ -1202,7 +1198,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsReviewSection => '복습';
 
   @override
-  String get settingsSessionSize => '한 번에 꺼낼 카드';
+  String get settingsSessionSize => '한 번에 복습할 카드 수';
 
   @override
   String get settingsMixLabel => '버린 카드 다시 섞기';
@@ -1219,7 +1215,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsNotificationsSection => '알림';
 
   @override
-  String get settingsReminderMaster => '복습 알림';
+  String get settingsReminderMaster => '단어 알림';
 
   @override
   String get settingsAddSlot => '알림 구간';
@@ -1266,6 +1262,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsAbout => '정보 · 출처';
+
+  @override
+  String get settingsPrivacy => '개인정보처리방침';
 
   @override
   String get aboutDataSources => '데이터 출처';
@@ -1386,9 +1385,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wordScanGallery => '앨범에서 고르기';
 
   @override
-  String get wordScanPick => '가져올 문장 고르기';
-
-  @override
   String get wordScanFailed => '사진의 글자를 읽지 못했어요';
 
   @override
@@ -1398,4 +1394,38 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => '내 사진';
+
+  @override
+  String wordScanAdded(int count) {
+    return '사진에서 문장 $count개를 가져왔어요';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return '신규 $fresh · 복습 $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => '문제 방식';
+
+  @override
+  String get settingsAnswerInput => '빈칸에 직접 쓰기';
+
+  @override
+  String get settingsAnswerChoice => '보기 4개 중 고르기';
+
+  @override
+  String get settingsAnswerHelp => '홈의 시작 버튼으로 복습할 때 이 방식으로 문제가 나와요.';
+
+  @override
+  String get sampleWelcomeMeaning => '환영합니다, 어서 오세요';
+
+  @override
+  String get sampleWelcomeExample1 => 'Vocab with Examples에 오신 것을 환영합니다!';
+
+  @override
+  String get sampleWelcomeExample2 => '모두 돌아온 것을 환영해요.';
+
+  @override
+  String get homeAddCardHint => '영어 단어를 쓰면 뜻과 예문을 찾아 카드로 만들어요';
 }

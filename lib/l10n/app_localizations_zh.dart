@@ -104,6 +104,7 @@ class AppLocalizationsZh extends AppLocalizations {
       'determiner': '限定词',
       'phrasalVerb': '短语动词',
       'idiom': '习语',
+      'phrase': '短语',
       'other': '$value',
     });
     return '$_temp0';
@@ -834,13 +835,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => '复习提醒';
+  String get notificationChannelName => '单词通知';
 
   @override
-  String get notificationChannelDescription => '在你设定的日期和时间发送单词复习提醒';
+  String get notificationChannelDescription => '在设定的日期和时段以通知显示单词和释义';
 
   @override
-  String get notificationTitleDefault => '该复习啦';
+  String get notificationTitleDefault => '今日单词';
 
   @override
   String notificationTitleWords(int count) {
@@ -853,7 +854,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get notificationBodyDefault => '今天的单词在等你，点一下马上开始学习！';
+  String get notificationBodyDefault => '添加单词后，这里会显示单词和释义。';
 
   @override
   String homeError(String error) {
@@ -896,10 +897,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeQuickStart => '快速开始';
 
   @override
-  String get homeQuickGuessWord => '看例句猜单词';
+  String get homeQuickGuessWord => '填空 · 输入';
 
   @override
-  String get homeQuickFillBlank => '例句填空';
+  String get homeQuickFillBlank => '填空 · 选择';
 
   @override
   String get homeQuickBrowseWordbooks => '浏览单词本';
@@ -1061,12 +1062,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return '今天 $count张';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return '新 $fresh · 复习 $review';
+    return '今天复习 $count张';
   }
 
   @override
@@ -1220,7 +1216,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsReviewSection => '复习';
 
   @override
-  String get settingsSessionSize => '每次的卡片数';
+  String get settingsSessionSize => '每次复习的卡片数';
 
   @override
   String get settingsMixLabel => '混入已丢弃的卡片';
@@ -1237,7 +1233,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsNotificationsSection => '提醒';
 
   @override
-  String get settingsReminderMaster => '复习提醒';
+  String get settingsReminderMaster => '单词通知';
 
   @override
   String get settingsAddSlot => '提醒时段';
@@ -1284,6 +1280,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAbout => '信息 · 来源';
+
+  @override
+  String get settingsPrivacy => '隐私政策';
 
   @override
   String get aboutDataSources => '数据来源';
@@ -1404,9 +1403,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wordScanGallery => '从相册选择';
 
   @override
-  String get wordScanPick => '选择要添加的句子';
-
-  @override
   String get wordScanFailed => '无法识别照片中的文字';
 
   @override
@@ -1416,4 +1412,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => '我的照片';
+
+  @override
+  String wordScanAdded(int count) {
+    return '已从照片添加 $count 个句子';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return '新 $fresh · 复习 $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => '答题方式';
+
+  @override
+  String get settingsAnswerInput => '填写单词';
+
+  @override
+  String get settingsAnswerChoice => '四选一';
+
+  @override
+  String get settingsAnswerHelp => '在首页点“开始”复习时使用此方式。';
+
+  @override
+  String get sampleWelcomeMeaning => '欢迎';
+
+  @override
+  String get sampleWelcomeExample1 => '欢迎来到 Vocab with Examples！';
+
+  @override
+  String get sampleWelcomeExample2 => '欢迎大家回来。';
+
+  @override
+  String get homeAddCardHint => '输入英语单词，自动查找释义和例句做成卡片';
 }

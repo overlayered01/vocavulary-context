@@ -49,6 +49,8 @@ extension WordPartOfSpeechL10n on AppLocalizations {
     '한정사': 'determiner',
     '구동사': 'phrasalVerb',
     '숙어': 'idiom',
+    '관용구': 'idiom',
+    '구': 'phrase',
     // 영어로 저장된 값
     'noun': 'noun',
     'verb': 'verb',
@@ -64,6 +66,7 @@ extension WordPartOfSpeechL10n on AppLocalizations {
     'determiner': 'determiner',
     'phrasal verb': 'phrasalVerb',
     'idiom': 'idiom',
+    'phrase': 'phrase',
   };
 
   String partOfSpeech(String value) => wordPartOfSpeech(

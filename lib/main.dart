@@ -13,10 +13,12 @@ import 'screens/review_screen.dart';
 import 'services/notification_service.dart';
 import 'supabase_config.dart';
 
-/// 알림을 탭하면 바로 예문 복습 화면으로 진입한다.
+/// 단어 알림을 탭하면 홈의 시작과 같은 복습으로 들어간다.
 void _openReview() {
   rootNavigatorKey.currentState?.push(
-    MaterialPageRoute(builder: (_) => const ReviewScreen()),
+    MaterialPageRoute(
+      builder: (_) => const ReviewScreen(mode: ReviewMode.mixed),
+    ),
   );
 }
 

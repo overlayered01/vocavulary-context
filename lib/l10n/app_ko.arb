@@ -50,7 +50,7 @@
       }
     }
   },
-  "wordPartOfSpeech": "{pos, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} article{관사} determiner{한정사} phrasalVerb{구동사} idiom{숙어} other{{value}}}",
+  "wordPartOfSpeech": "{pos, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} article{관사} determiner{한정사} phrasalVerb{구동사} idiom{관용구} phrase{구} other{{value}}}",
   "@wordPartOfSpeech": {
     "description": "Display name of a part of speech. pos is an ASCII key mapped from the stored Korean value; value is the stored value shown as-is for unknown parts.",
     "placeholders": {
@@ -540,9 +540,9 @@
       }
     }
   },
-  "notificationChannelName": "복습 알림",
-  "notificationChannelDescription": "설정한 요일·시간대에 보내는 단어 복습 알림",
-  "notificationTitleDefault": "복습 시간이에요",
+  "notificationChannelName": "단어 알림",
+  "notificationChannelDescription": "설정한 요일·시간대에 단어와 뜻을 알림으로 보여 줘요",
+  "notificationTitleDefault": "오늘의 단어",
   "notificationTitleWords": "오늘의 단어 {count}개",
   "@notificationTitleWords": {
     "description": "Reminder notification title listing today's words.",
@@ -552,7 +552,7 @@
       }
     }
   },
-  "notificationBodyDefault": "오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!",
+  "notificationBodyDefault": "단어를 추가하면 여기에 단어와 뜻을 보여 드려요.",
   "homeError": "오류: {error}",
   "@homeError": {
     "placeholders": {
@@ -585,8 +585,8 @@
   },
   "homeWordOfTheDay": "오늘의 단어",
   "homeQuickStart": "빠른 시작",
-  "homeQuickGuessWord": "예문 보고 단어 맞추기",
-  "homeQuickFillBlank": "예문 빈칸 채우기",
+  "homeQuickGuessWord": "빈칸 채우기 · 직접 쓰기",
+  "homeQuickFillBlank": "빈칸 채우기 · 보기 고르기",
   "homeQuickBrowseWordbooks": "단어장 둘러보기",
   "homeCreateWordbookFirst": "먼저 단어장을 만들어 주세요.",
   "homeEditWord": "단어 편집",
@@ -721,21 +721,10 @@
     "description": "Collapsed status chip: auto examples are added without translations."
   },
   "homeRemainingCards": "남은 카드",
-  "homeTodayCards": "오늘 {count}장",
+  "homeTodayCards": "오늘 복습 {count}장",
   "@homeTodayCards": {
     "placeholders": {
       "count": {
-        "type": "int"
-      }
-    }
-  },
-  "homeNewReviewBreakdown": "신규 {fresh} · 복습 {review}",
-  "@homeNewReviewBreakdown": {
-    "placeholders": {
-      "fresh": {
-        "type": "int"
-      },
-      "review": {
         "type": "int"
       }
     }
@@ -828,7 +817,7 @@
   "settingsLanguageRow": "뜻 · 예문 · 앱 언어",
   "settingsFollowDevice": "기기 설정 따름",
   "settingsReviewSection": "복습",
-  "settingsSessionSize": "한 번에 꺼낼 카드",
+  "settingsSessionSize": "한 번에 복습할 카드 수",
   "settingsMixLabel": "버린 카드 다시 섞기",
   "settingsMixExample": "{total}장 중 {mixed}장",
   "@settingsMixExample": {
@@ -843,7 +832,7 @@
   },
   "settingsWordAddSection": "단어 추가",
   "settingsNotificationsSection": "알림",
-  "settingsReminderMaster": "복습 알림",
+  "settingsReminderMaster": "단어 알림",
   "settingsAddSlot": "알림 구간",
   "settingsWeeklyCount": "일주일 {count}회",
   "@settingsWeeklyCount": {
@@ -872,6 +861,7 @@
   "settingsRecorded": "단어는 사람 녹음으로",
   "settingsRecordedHelp": "녹음이 없으면 목소리로 읽음",
   "settingsAbout": "정보 · 출처",
+  "settingsPrivacy": "개인정보처리방침",
   "aboutDataSources": "데이터 출처",
   "aboutUseMeanings": "뜻 · 사전 예문",
   "aboutUseOnline": "온라인 사전",
@@ -974,7 +964,6 @@
   "wordAddScanExample": "사진에서 예문 가져오기",
   "wordScanCamera": "카메라로 찍기",
   "wordScanGallery": "앨범에서 고르기",
-  "wordScanPick": "가져올 문장 고르기",
   "wordScanFailed": "사진의 글자를 읽지 못했어요",
   "wordScanNoSentence": "사진에서 '{term}'이(가) 들어간 문장을 찾지 못했어요",
   "@wordScanNoSentence": {
@@ -984,5 +973,35 @@
       }
     }
   },
-  "exampleSourcePhoto": "내 사진"
+  "exampleSourcePhoto": "내 사진",
+  "wordScanAdded": "사진에서 문장 {count}개를 가져왔어요",
+  "@wordScanAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNewReviewBreakdown": "신규 {fresh} · 복습 {review}",
+  "@homeNewReviewBreakdown": {
+    "placeholders": {
+      "fresh": {
+        "type": "int"
+      },
+      "review": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAnswerStyle": "문제 방식",
+  "settingsAnswerInput": "빈칸에 직접 쓰기",
+  "settingsAnswerChoice": "보기 4개 중 고르기",
+  "settingsAnswerHelp": "홈의 시작 버튼으로 복습할 때 이 방식으로 문제가 나와요.",
+  "sampleWelcomeMeaning": "환영합니다, 어서 오세요",
+  "@sampleWelcomeMeaning": {
+    "description": "Meaning of the sample word 'welcome' (interjection) in the user's language."
+  },
+  "sampleWelcomeExample1": "Vocab with Examples에 오신 것을 환영합니다!",
+  "sampleWelcomeExample2": "모두 돌아온 것을 환영해요.",
+  "homeAddCardHint": "영어 단어를 쓰면 뜻과 예문을 찾아 카드로 만들어요"
 }

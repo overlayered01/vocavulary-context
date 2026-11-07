@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
 import '../models/app_settings.dart';
@@ -14,6 +15,11 @@ import '../widgets/reminder_schedule_editor.dart';
 import '../widgets/theme_picker.dart';
 import '../widgets/translation_language_dropdown.dart';
 import 'about_screen.dart';
+
+/// 개인정보처리방침 공개 페이지 (overlayered01.github.io 레포).
+final kPrivacyPolicyUrl = Uri.parse(
+  'https://overlayered01.github.io/vocabexamples/privacy/',
+);
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -87,6 +93,18 @@ class SettingsScreen extends ConsumerWidget {
             WhiteBlock(
               child: Column(
                 children: [
+                  BlockRow(
+                    key: const ValueKey('settings-answer-style'),
+                    title: l10n.settingsAnswerStyle,
+                    subtitle: l10n.settingsAnswerHelp,
+                    minHeight: 64,
+                    trailing: ChevronValue(
+                      settings.answerByChoice
+                          ? l10n.settingsAnswerChoice
+                          : l10n.settingsAnswerInput,
+                    ),
+                    onTap: () => _answerStyleSheet(context, ref),
+                  ),
                   BlockRow(
                     title: l10n.settingsSessionSize,
                     minHeight: 60,
@@ -312,9 +330,9 @@ class SettingsScreen extends ConsumerWidget {
 
             WhiteBlock(
               color: AppColors.panelHigh,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AboutScreen()),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
               child: SizedBox(
                 height: 56,
                 child: Row(
@@ -337,8 +355,71 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 10),
+            WhiteBlock(
+              color: AppColors.panelHigh,
+              onTap: () => launchUrl(
+                kPrivacyPolicyUrl,
+                mode: LaunchMode.externalApplication,
+              ),
+              child: SizedBox(
+                height: 56,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.settingsPrivacy,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.onPanel,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.open_in_new_rounded,
+                      size: 18,
+                      color: AppColors.onPanelSub,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _answerStyleSheet(BuildContext context, WidgetRef ref) {
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) {
+          final choice = ref.watch(
+            settingsProvider.select((s) => s.answerByChoice),
+          );
+          Widget option(bool value, String label) => ListTile(
+            key: ValueKey('answer-style-$value'),
+            title: Text(label),
+            trailing: choice == value
+                ? Icon(Icons.check_rounded, color: AppColors.ink)
+                : null,
+            onTap: () {
+              ref.read(settingsProvider.notifier).setAnswerByChoice(value);
+              Navigator.pop(ctx);
+            },
+          );
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                option(false, ctx.l10n.settingsAnswerInput),
+                option(true, ctx.l10n.settingsAnswerChoice),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -386,7 +467,9 @@ class SettingsScreen extends ConsumerWidget {
       isScrollControlled: true,
       builder: (ctx) => Consumer(
         builder: (ctx, ref, _) {
-          final selected = ref.watch(settingsProvider.select((s) => s.ttsVoice));
+          final selected = ref.watch(
+            settingsProvider.select((s) => s.ttsVoice),
+          );
           final notifier = ref.read(settingsProvider.notifier);
           Widget option(String value, String label) => ListTile(
             title: Text(label),
@@ -584,9 +667,10 @@ class _ExampleDataRowsState extends ConsumerState<_ExampleDataRows> {
             PackState.none => l10n.settingsPackNone,
             PackState.downloading => l10n.settingsPackDownloading(size),
             PackState.failed => l10n.settingsPackFailed,
-            PackState.ready => status.version == null
-                ? l10n.settingsPackReady(size)
-                : l10n.settingsPackVersion(status.version!, size),
+            PackState.ready =>
+              status.version == null
+                  ? l10n.settingsPackReady(size)
+                  : l10n.settingsPackVersion(status.version!, size),
           };
         }
         final canUpdate = enabled && language.hasTranslations;
@@ -612,8 +696,7 @@ class _ExampleDataRowsState extends ConsumerState<_ExampleDataRows> {
                     ? l10n.settingsPackRetry
                     : l10n.settingsPackUpdate,
                 divider: false,
-                trailing: _checking ||
-                        status?.state == PackState.downloading
+                trailing: _checking || status?.state == PackState.downloading
                     ? const SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),

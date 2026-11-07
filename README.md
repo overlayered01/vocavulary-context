@@ -61,7 +61,7 @@ flutter build apk --debug
 
 브라우저에서 `http://127.0.0.1:7357`을 엽니다. 서버 종료는 실행 터미널에서 `Ctrl+C`입니다.
 Android 설치 파일은 `build/app/outputs/flutter-apk/app-debug.apk`입니다.
-Android 패키지명은 `com.easywith.vocabulary`로 유지하므로, 같은 서명의 기존 앱에 업데이트하면 저장된 데이터를 유지합니다.
+Android 패키지명은 `com.overlayered.vocabexamples`입니다. 이전 패키지명(`com.easywith.vocabulary`)으로 설치한 앱과는 다른 앱으로 설치되므로, 기존 데이터는 설정에서 내보낸 뒤 새 앱에서 가져오세요.
 다른 PC에서 만든 APK와 서명이 다르면 업데이트 설치가 거절될 수 있습니다. 기존 앱을 삭제하기 전 설정에서 데이터를 내보내세요.
 
 테스트할 항목:

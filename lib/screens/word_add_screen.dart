@@ -58,6 +58,9 @@ class _GroupChoice {
   final SenseGroup? source;
   final List<Example> examples = [];
   final Set<int> picked = {};
+
+  /// 사용자가 직접 쓰거나 사진에서 가져온 예문. 지울 수 있다.
+  final Set<Example> userExamples = {};
   bool examplesRequested = false;
   bool loadingExamples = false;
   _GroupChoice({
@@ -75,7 +78,16 @@ class _GroupChoice {
 }
 
 class _WordAddScreenState extends ConsumerState<WordAddScreen> {
-  static const _manualParts = ['명사', '동사', '형용사', '부사', ''];
+  static const _manualParts = [
+    '명사',
+    '동사',
+    '형용사',
+    '부사',
+    '구동사',
+    '숙어',
+    '구',
+    '',
+  ];
   static const _maxExamples = 8;
 
   late String _bookId = widget.wordbookId;
@@ -88,10 +100,22 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
   int _selected = 0;
   bool _saving = false;
 
+  /// 화면 안에서 바로 쓰는 뜻·예문 입력칸.
+  final _meaningInput = TextEditingController();
+  final _sentenceInput = TextEditingController();
+  final _translationInput = TextEditingController();
+  bool _writingMeaning = false;
+  bool _writingExample = false;
+  bool _scanOpen = false;
+  String _meaningPart = '';
+
   @override
   void dispose() {
     _debounce?.cancel();
     _term.dispose();
+    _meaningInput.dispose();
+    _sentenceInput.dispose();
+    _translationInput.dispose();
     super.dispose();
   }
 
@@ -234,77 +258,17 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
     }
   }
 
-  /// 뜻을 직접 쓴다. 품사도 고르거나 모르면 비워 둔다.
-  Future<void> _addManualMeaning() async {
-    final l10n = context.l10n;
-    final controller = TextEditingController();
-    var part = _current?.partOfSpeech ?? '';
-    final value = await showDialog<(String, String)>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
-          title: Text(l10n.wordAddManualInput),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                key: const ValueKey('manual-meaning'),
-                controller: controller,
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: l10n.wordAddMeaningLabel,
-                ),
-                onSubmitted: (v) => Navigator.pop(ctx, (v, part)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.wordAddPosLabel,
-                style: TextStyle(fontSize: 12, color: AppColors.sub),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final p in _manualParts)
-                    ChoiceChip(
-                      key: ValueKey('manual-pos-$p'),
-                      label: Text(
-                        p.isEmpty
-                            ? l10n.wordAddPosUnknown
-                            : partOfSpeechLabel(ctx, p),
-                      ),
-                      selected: part == p,
-                      showCheckmark: false,
-                      onSelected: (_) => setDialog(() => part = p),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.commonCancel),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, (controller.text, part)),
-              child: Text(l10n.commonAdd),
-            ),
-          ],
-        ),
-      ),
-    );
-    final meaning = value?.$1.trim() ?? '';
-    if (value == null || meaning.isEmpty || !mounted) return;
-    final chosen = value.$2;
+  /// 직접 쓴 뜻을 넣는다. 같은 품사 카드가 있으면 그 카드에, 없으면 새 카드를 맨 위에.
+  void _commitMeaning() {
+    final meaning = _meaningInput.text.trim();
+    if (meaning.isEmpty) return;
+    final part = _meaningPart;
     setState(() {
-      var index = _groups.indexWhere((g) => g.partOfSpeech == chosen);
+      var index = _groups.indexWhere((g) => g.partOfSpeech == part);
       if (index < 0) {
         _groups.insert(
           0,
-          _GroupChoice(partOfSpeech: chosen, meanings: [], checked: {}),
+          _GroupChoice(partOfSpeech: part, meanings: [], checked: {}),
         );
         index = 0;
       }
@@ -312,102 +276,73 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
       if (!group.meanings.contains(meaning)) group.meanings.insert(0, meaning);
       group.checked.add(meaning);
       _selected = index;
+      _meaningInput.clear();
+      _writingMeaning = false;
     });
     _loadExamples();
   }
 
-  Future<void> _writeExample() async {
-    final group = _current;
-    if (group == null) return;
-    final l10n = context.l10n;
-    final language = ref.read(settingsProvider).translationLanguage;
-    final sentence = TextEditingController();
-    final translation = TextEditingController();
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.wordAddWriteExample),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: sentence,
-              autofocus: true,
-              minLines: 2,
-              maxLines: 4,
-              decoration: InputDecoration(labelText: l10n.wordEditSentence),
-            ),
-            if (language.hasTranslations) ...[
-              const SizedBox(height: 8),
-              TextField(
-                controller: translation,
-                minLines: 1,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: l10n.wordEditTranslationLabel(
-                    l10n.language(language),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.commonCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.commonAdd),
-          ),
-        ],
-      ),
-    );
-    if (saved != true || sentence.text.trim().isEmpty || !mounted) return;
+  /// 직접 쓴 뜻을 지운다. 뜻이 하나도 남지 않은 직접 만든 카드는 없앤다.
+  void _deleteMeaning(int index, String meaning) {
+    final selected = _current;
     setState(() {
-      group.examples.insert(
-        0,
-        Example(
-          sentence: sentence.text.trim(),
-          translation: translation.text.trim(),
-        ),
-      );
-      final shifted = {for (final i in group.picked) i + 1};
-      group.picked
-        ..clear()
-        ..addAll(shifted)
-        ..add(0);
+      final group = _groups[index];
+      group.meanings.remove(meaning);
+      group.checked.remove(meaning);
+      if (group.meanings.isEmpty && group.source == null) {
+        _groups.removeAt(index);
+        final keep = selected == null ? -1 : _groups.indexOf(selected);
+        _selected = keep >= 0 ? keep : _firstFreeGroup();
+      }
+    });
+    _loadExamples();
+  }
+
+  /// 직접 쓴 예문을 고른 품사의 후보 맨 위에 넣고 고른다.
+  void _commitExample() {
+    final group = _current;
+    final sentence = _sentenceInput.text.trim();
+    if (group == null || sentence.isEmpty) return;
+    setState(() {
+      _insertExamples(group, [
+        Example(sentence: sentence, translation: _translationInput.text.trim()),
+      ]);
+      _sentenceInput.clear();
+      _translationInput.clear();
+      _writingExample = false;
     });
   }
 
-  /// 책·프린트를 찍거나 앨범 사진을 골라, 이 단어가 들어간 문장을 예문으로 가져온다.
-  Future<void> _scanExamples() async {
+  /// [examples]를 후보 맨 위에 넣고 고른 상태로 둔다. 직접 쓴 것이라 지울 수 있다.
+  void _insertExamples(_GroupChoice group, List<Example> examples) {
+    group.examples.insertAll(0, examples);
+    group.userExamples.addAll(examples);
+    final shifted = {for (final i in group.picked) i + examples.length};
+    group.picked
+      ..clear()
+      ..addAll(shifted)
+      ..addAll([for (var i = 0; i < examples.length; i++) i]);
+  }
+
+  void _deleteExample(_GroupChoice group, int index) {
+    setState(() {
+      group.userExamples.remove(group.examples.removeAt(index));
+      final picked = {
+        for (final i in group.picked)
+          if (i != index) i > index ? i - 1 : i,
+      };
+      group.picked
+        ..clear()
+        ..addAll(picked);
+    });
+  }
+
+  /// 책·프린트를 찍거나 앨범 사진을 골라, 이 단어가 들어간 문장을 예문 후보로 넣는다.
+  Future<void> _scanExamples(ImageSource source) async {
     final group = _current;
     final term = _term.text.trim();
     if (group == null || term.isEmpty) return;
     final l10n = context.l10n;
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(l10n.wordScanCamera),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l10n.wordScanGallery),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
     List<String> sentences;
     try {
       final image = await ImagePicker().pickImage(
@@ -428,64 +363,188 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
       return;
     }
     if (!mounted) return;
-    setState(() => group.loadingExamples = false);
-    if (sentences.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.wordScanNoSentence(term))));
-      return;
-    }
-    final chosen = {for (var i = 0; i < sentences.length && i < 3; i++) i};
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
-          title: Text(l10n.wordScanPick),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                for (final (i, sentence) in sentences.indexed)
-                  CheckboxListTile(
-                    value: chosen.contains(i),
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: Text(sentence),
-                    onChanged: (_) => setDialog(() {
-                      if (!chosen.remove(i)) chosen.add(i);
-                    }),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.commonCancel),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.commonAdd),
-            ),
-          ],
+    setState(() {
+      group.loadingExamples = false;
+      _scanOpen = false;
+      if (sentences.isNotEmpty) {
+        _insertExamples(group, [
+          for (final sentence in sentences)
+            Example(sentence: sentence, source: Example.photoSource),
+        ]);
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sentences.isEmpty
+              ? l10n.wordScanNoSentence(term)
+              : l10n.wordScanAdded(sentences.length),
         ),
       ),
     );
-    if (ok != true || !mounted) return;
-    setState(() {
-      final added = [
-        for (final (i, sentence) in sentences.indexed)
-          if (chosen.contains(i))
-            Example(sentence: sentence, source: Example.photoSource),
-      ];
-      group.examples.insertAll(0, added);
-      final shifted = {for (final i in group.picked) i + added.length};
-      group.picked
-        ..clear()
-        ..addAll(shifted)
-        ..addAll([for (var i = 0; i < added.length; i++) i]);
-    });
+  }
+
+  /// 뜻 직접 입력: 화면 안에서 바로 쓰고 품사를 고른다.
+  Widget _meaningEditor() {
+    final l10n = context.l10n;
+    return WhiteBlock(
+      key: const ValueKey('manual-editor'),
+      radius: 22,
+      outline: AppColors.point,
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('manual-meaning'),
+            controller: _meaningInput,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _commitMeaning(),
+            decoration: InputDecoration(labelText: l10n.wordAddMeaningLabel),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.wordAddPosLabel,
+            style: TextStyle(fontSize: 12, color: AppColors.sub),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final p in _manualParts)
+                ChoiceChip(
+                  key: ValueKey('manual-pos-$p'),
+                  label: Text(
+                    p.isEmpty
+                        ? l10n.wordAddPosUnknown
+                        : partOfSpeechLabel(context, p),
+                  ),
+                  selected: _meaningPart == p,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _meaningPart = p),
+                ),
+            ],
+          ),
+          _editorButtons(
+            onCancel: () => setState(() {
+              _meaningInput.clear();
+              _writingMeaning = false;
+            }),
+            onAdd: _commitMeaning,
+            addKey: const ValueKey('manual-add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 예문 직접 쓰기: 화면 안에서 문장과 해석을 바로 쓴다.
+  Widget _exampleEditor() {
+    final l10n = context.l10n;
+    final language = ref.read(settingsProvider).translationLanguage;
+    return WhiteBlock(
+      key: const ValueKey('example-editor'),
+      radius: 22,
+      outline: AppColors.point,
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('example-sentence'),
+            controller: _sentenceInput,
+            autofocus: true,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(labelText: l10n.wordEditSentence),
+          ),
+          if (language.hasTranslations) ...[
+            const SizedBox(height: 8),
+            TextField(
+              key: const ValueKey('example-translation'),
+              controller: _translationInput,
+              minLines: 1,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: l10n.wordEditTranslationLabel(
+                  l10n.language(language),
+                ),
+              ),
+            ),
+          ],
+          _editorButtons(
+            onCancel: () => setState(() {
+              _sentenceInput.clear();
+              _translationInput.clear();
+              _writingExample = false;
+            }),
+            onAdd: _commitExample,
+            addKey: const ValueKey('example-add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editorButtons({
+    required VoidCallback onCancel,
+    required VoidCallback onAdd,
+    required Key addKey,
+  }) {
+    final l10n = context.l10n;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(onPressed: onCancel, child: Text(l10n.commonCancel)),
+        const SizedBox(width: 4),
+        FilledButton(
+          key: addKey,
+          onPressed: onAdd,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.ink,
+            foregroundColor: AppColors.card,
+          ),
+          child: Text(l10n.commonAdd),
+        ),
+      ],
+    );
+  }
+
+  /// 사진 가져오기: 카메라·앨범 버튼을 그 자리에 펼친다.
+  Widget _scanButtons() {
+    final l10n = context.l10n;
+    Widget button(IconData icon, String label, ImageSource source) => Expanded(
+      child: OutlinedButton.icon(
+        onPressed: () => _scanExamples(source),
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.onPanel,
+          side: BorderSide(color: AppColors.point, width: 1.5),
+          minimumSize: const Size(0, 52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+    );
+    return Row(
+      children: [
+        button(
+          Icons.photo_camera_outlined,
+          l10n.wordScanCamera,
+          ImageSource.camera,
+        ),
+        const SizedBox(width: 8),
+        button(
+          Icons.photo_library_outlined,
+          l10n.wordScanGallery,
+          ImageSource.gallery,
+        ),
+      ],
+    );
   }
 
   Future<void> _save() async {
@@ -644,22 +703,29 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
             children: [
               if (term.isNotEmpty) ...[
-                PanelLabel(
-                  l10n.wordAddMeaningSelect,
+                _SectionHeader(
+                  step: 1,
+                  title: l10n.wordAddMeaningSelect,
                   trailing: lookup == null || _loading
                       ? null
                       : lookup.failed
-                      ? Text(l10n.wordAddLookupFailed)
+                      ? l10n.wordAddLookupFailed
                       : _groups.every((g) => g.source == null) &&
                             settings.autoMeanings
-                      ? Text(l10n.wordAddNoResults)
+                      ? l10n.wordAddNoResults
                       : null,
                 ),
-                _AddAction(
-                  key: const ValueKey('word-add-manual'),
-                  label: l10n.wordAddManualInput,
-                  onTap: _addManualMeaning,
-                ),
+                if (_writingMeaning)
+                  _meaningEditor()
+                else
+                  _AddAction(
+                    key: const ValueKey('word-add-manual'),
+                    label: l10n.wordAddManualInput,
+                    onTap: () => setState(() {
+                      _meaningPart = _current?.partOfSpeech ?? '';
+                      _writingMeaning = true;
+                    }),
+                  ),
                 const SizedBox(height: 10),
                 for (final (index, group) in _groups.indexed) ...[
                   _GroupCard(
@@ -675,21 +741,49 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
                       });
                       if (index != _selected) _select(index);
                     },
+                    onDelete: (meaning) => _deleteMeaning(index, meaning),
                   ),
                   const SizedBox(height: 10),
                 ],
                 if (current != null) ...[
-                  const SizedBox(height: 12),
-                  PanelLabel(
-                    current.partOfSpeech.isEmpty
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 18, 4, 22),
+                    child: Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.panelLine,
+                    ),
+                  ),
+                  _SectionHeader(
+                    step: 2,
+                    title: current.partOfSpeech.isEmpty
                         ? l10n.wordExamples
                         : l10n.wordAddExamplesOf(
                             partOfSpeechLabel(context, current.partOfSpeech),
                           ),
-                    trailing: Text(
-                      l10n.wordAddSelectedCount(current.picked.length),
-                    ),
+                    trailing: l10n.wordAddSelectedCount(current.picked.length),
                   ),
+                  if (_writingExample)
+                    _exampleEditor()
+                  else
+                    _AddAction(
+                      key: const ValueKey('word-add-write-example'),
+                      label: l10n.wordAddWriteExample,
+                      onTap: () => setState(() => _writingExample = true),
+                    ),
+                  if (textScanSupported) ...[
+                    const SizedBox(height: 10),
+                    if (_scanOpen)
+                      _scanButtons()
+                    else
+                      _AddAction(
+                        key: const ValueKey('word-add-scan-example'),
+                        label: l10n.wordAddScanExample,
+                        icon: Icons.photo_camera_outlined,
+                        onTap: () => setState(() => _scanOpen = true),
+                      ),
+                  ],
+                  const SizedBox(height: 10),
                   for (final (i, example) in current.examples.indexed) ...[
                     _ExampleOption(
                       example: example,
@@ -698,6 +792,9 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
                       onTap: () => setState(() {
                         if (!current.picked.remove(i)) current.picked.add(i);
                       }),
+                      onDelete: current.userExamples.contains(example)
+                          ? () => _deleteExample(current, i)
+                          : null,
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -714,20 +811,6 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
                         style: TextStyle(color: AppColors.onPanelSub),
                       ),
                     ),
-                  _AddAction(
-                    key: const ValueKey('word-add-write-example'),
-                    label: l10n.wordAddWriteExample,
-                    onTap: _writeExample,
-                  ),
-                  if (textScanSupported) ...[
-                    const SizedBox(height: 10),
-                    _AddAction(
-                      key: const ValueKey('word-add-scan-example'),
-                      label: l10n.wordAddScanExample,
-                      icon: Icons.photo_camera_outlined,
-                      onTap: _scanExamples,
-                    ),
-                  ],
                 ],
               ],
             ],
@@ -855,6 +938,60 @@ class _BookPicker extends StatelessWidget {
   }
 }
 
+/// 단어 추가의 구간 제목. 번호 원과 굵은 제목으로 뜻·예문 구간을 나눈다.
+class _SectionHeader extends StatelessWidget {
+  final int step;
+  final String title;
+  final String? trailing;
+  const _SectionHeader({
+    required this.step,
+    required this.title,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+    child: Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.point,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$step',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onPoint,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onPanel,
+            ),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: TextStyle(fontSize: 12, color: AppColors.onPanelSub),
+          ),
+      ],
+    ),
+  );
+}
+
 /// 한 품사의 뜻 카드. 고른 카드는 흰 바탕과 포인트 테두리, 나머지는 흐리게.
 class _GroupCard extends StatelessWidget {
   final _GroupChoice group;
@@ -862,12 +999,16 @@ class _GroupCard extends StatelessWidget {
   final bool saved;
   final VoidCallback onSelect;
   final ValueChanged<String> onToggle;
+
+  /// 직접 쓴 뜻 지우기.
+  final ValueChanged<String> onDelete;
   const _GroupCard({
     required this.group,
     required this.selected,
     required this.saved,
     required this.onSelect,
     required this.onToggle,
+    required this.onDelete,
   });
 
   @override
@@ -968,6 +1109,18 @@ class _GroupCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (group.manualMeanings.contains(meaning))
+                      IconButton(
+                        key: ValueKey('delete-meaning-$meaning'),
+                        tooltip: context.l10n.commonDelete,
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => onDelete(meaning),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppColors.sub,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1131,11 +1284,15 @@ class _ExampleOption extends StatelessWidget {
   final String term;
   final bool checked;
   final VoidCallback onTap;
+
+  /// 직접 쓰거나 사진에서 가져온 예문이면 지우기. 아니면 null.
+  final VoidCallback? onDelete;
   const _ExampleOption({
     required this.example,
     required this.term,
     required this.checked,
     required this.onTap,
+    this.onDelete,
   });
 
   @override
@@ -1186,6 +1343,18 @@ class _ExampleOption extends StatelessWidget {
               ],
             ),
           ),
+          if (onDelete != null)
+            IconButton(
+              key: ValueKey('delete-example-${example.sentence}'),
+              tooltip: context.l10n.commonDelete,
+              visualDensity: VisualDensity.compact,
+              onPressed: onDelete,
+              icon: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: checked ? AppColors.sub : AppColors.onPanelSub,
+              ),
+            ),
         ],
       ),
     );

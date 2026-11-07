@@ -19,7 +19,6 @@ import 'services/dictionary_service.dart';
 import 'services/local_dictionary.dart';
 import 'services/offline_examples.dart';
 import 'services/translation_packs.dart';
-import 'services/mobile_ads_service.dart';
 import 'services/notification_service.dart';
 import 'services/reminder_planner.dart';
 import 'services/tts_service.dart';
@@ -47,9 +46,6 @@ final appL10nProvider = Provider<AppLocalizations>(
   ),
 );
 final ttsServiceProvider = Provider<TtsService>((ref) => TtsService());
-final mobileAdsServiceProvider = Provider<MobileAdsService>(
-  (ref) => MobileAdsService(),
-);
 
 /// 앱에 내장한 언어판 사전. 한 번 읽은 내용은 앱이 끝날 때까지 유지한다.
 final localDictionaryProvider = Provider<LocalDictionary>(
@@ -207,6 +203,11 @@ class SettingsNotifier extends Notifier<AppSettings> {
       translationLanguage: language,
       useDeviceTranslationLanguage: language == null,
     );
+    await _persist();
+  }
+
+  Future<void> setAnswerByChoice(bool value) async {
+    state = state.copyWith(answerByChoice: value);
     await _persist();
   }
 

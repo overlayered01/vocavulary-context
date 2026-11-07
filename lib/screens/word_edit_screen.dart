@@ -48,6 +48,7 @@ class _WordEditScreenState extends ConsumerState<WordEditScreen> {
     '한정사',
     '구동사',
     '숙어',
+    '구',
   ];
 
   late final TextEditingController _term;

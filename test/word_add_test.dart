@@ -370,9 +370,62 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('manual-pos-')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('추가').last);
+    await tester.tap(find.byKey(const ValueKey('manual-add')));
     await tester.pumpAndSettle();
     expect(find.text('품사 모름'), findsOneWidget);
+
+    // 예문도 창 없이 그 자리에서 쓰고, 직접 쓴 것은 지울 수 있다.
+    final list = find
+        .descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('word-add-write-example')),
+      200,
+      scrollable: list,
+    );
+    await tester.tap(find.byKey(const ValueKey('word-add-write-example')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('example-sentence')),
+      'A zxqv is here.',
+    );
+    await tester.tap(find.byKey(const ValueKey('example-add')));
+    await tester.pumpAndSettle();
+    final deleteExample = find.byKey(
+      const ValueKey('delete-example-A zxqv is here.'),
+    );
+    await tester.scrollUntilVisible(deleteExample, 200, scrollable: list);
+    await tester.tap(deleteExample);
+    await tester.pumpAndSettle();
+    expect(find.text('A zxqv is here.'), findsNothing);
+
+    // 직접 쓴 뜻을 지우면 그 카드도 사라지고, 다시 쓴다.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('delete-meaning-없는 말')),
+      -200,
+      scrollable: list,
+    );
+    await tester.tap(find.byKey(const ValueKey('delete-meaning-없는 말')));
+    await tester.pumpAndSettle();
+    expect(find.text('품사 모름'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('word-add-manual')),
+      -200,
+      scrollable: list,
+    );
+    await tester.tap(find.byKey(const ValueKey('word-add-manual')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('manual-meaning')),
+      '없는 말',
+    );
+    await tester.tap(find.byKey(const ValueKey('manual-pos-')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('manual-add')));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('word-add-save')));
     await tester.pumpAndSettle();
@@ -436,7 +489,11 @@ void main() {
         updatedAt: date,
       ),
     );
-    await pumpScreen(tester, WordbookDetailScreen(book: book), offline: offline);
+    await pumpScreen(
+      tester,
+      WordbookDetailScreen(book: book),
+      offline: offline,
+    );
     expect(find.text('예문 1개 찾음'), findsOneWidget);
 
     await pumpScreen(tester, WordDetailScreen(word: word), offline: offline);

@@ -7,7 +7,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/wordbooks_screen.dart';
 import 'theme.dart';
-import 'widgets/home_banner_ad.dart';
+import 'widgets/panel.dart' show ContentWidth;
 
 /// 알림 탭 등 위젯 트리 밖에서 화면을 열 때 쓰는 루트 내비게이터 키.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -178,37 +178,42 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (index == 0) const HomeBannerAd(),
-              SizedBox(
-                height: 64,
-                child: Row(
-                  children: [
-                    for (var i = 0; i < labels.length; i++)
-                      Expanded(
-                        child: Semantics(
-                          selected: i == index,
-                          button: true,
-                          child: InkWell(
-                            onTap: () =>
-                                ref.read(homeTabProvider.notifier).set(i),
-                            child: Center(
-                              child: Text(
-                                labels[i],
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: i == index
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: i == index
-                                      ? AppColors.onPanel
-                                      : AppColors.onPanelSub,
+              // 본문과 같은 폭·여백 안에 탭을 둔다 (넓은 화면에서 양 끝으로 벌어지지 않게).
+              ContentWidth(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  child: SizedBox(
+                    height: 64,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < labels.length; i++)
+                          Expanded(
+                            child: Semantics(
+                              selected: i == index,
+                              button: true,
+                              child: InkWell(
+                                onTap: () =>
+                                    ref.read(homeTabProvider.notifier).set(i),
+                                child: Center(
+                                  child: Text(
+                                    labels[i],
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: i == index
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: i == index
+                                          ? AppColors.onPanel
+                                          : AppColors.onPanelSub,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

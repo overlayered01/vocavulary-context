@@ -49,6 +49,9 @@ class AppSettings {
   /// 예문 해석 데이터를 내려받을지. null이면 아직 묻지 않았다.
   final bool? exampleData;
 
+  /// 시작 버튼 복습의 답 방식: true면 보기 4개 중 고르기, false면 빈칸에 직접 쓰기.
+  final bool answerByChoice;
+
   const AppSettings({
     this.reviewMixRatio = 20,
     this.reminderEnabled = true,
@@ -67,6 +70,7 @@ class AppSettings {
     this.ttsSpeed = 'normal',
     this.recordedPronunciation = true,
     this.exampleData,
+    this.answerByChoice = false,
   }) : translationLanguageOverride = translationLanguage;
 
   static const defaultReminderSchedules = [
@@ -106,6 +110,7 @@ class AppSettings {
     String? ttsSpeed,
     bool? recordedPronunciation,
     bool? exampleData,
+    bool? answerByChoice,
   }) {
     return AppSettings(
       reviewMixRatio: reviewMixRatio ?? this.reviewMixRatio,
@@ -129,6 +134,7 @@ class AppSettings {
       recordedPronunciation:
           recordedPronunciation ?? this.recordedPronunciation,
       exampleData: exampleData ?? this.exampleData,
+      answerByChoice: answerByChoice ?? this.answerByChoice,
     );
   }
 
@@ -151,6 +157,7 @@ class AppSettings {
     'ttsSpeed': ttsSpeed,
     'recordedPronunciation': recordedPronunciation,
     if (exampleData != null) 'exampleData': exampleData,
+    'answerByChoice': answerByChoice,
   };
 
   factory AppSettings.fromMap(Map<String, dynamic> m) => AppSettings(
@@ -173,6 +180,7 @@ class AppSettings {
     ttsSpeed: (m['ttsSpeed'] ?? 'normal') as String,
     recordedPronunciation: (m['recordedPronunciation'] ?? true) as bool,
     exampleData: m['exampleData'] as bool?,
+    answerByChoice: (m['answerByChoice'] ?? false) as bool,
   );
 
   /// 이전 버전의 단일 알림 시각은 같은 시각 한 번짜리 구간으로 옮긴다.

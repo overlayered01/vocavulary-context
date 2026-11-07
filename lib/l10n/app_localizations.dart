@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// Display name of a part of speech. pos is an ASCII key mapped from the stored Korean value; value is the stored value shown as-is for unknown parts.
   ///
   /// In ko, this message translates to:
-  /// **'{pos, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} article{관사} determiner{한정사} phrasalVerb{구동사} idiom{숙어} other{{value}}}'**
+  /// **'{pos, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} article{관사} determiner{한정사} phrasalVerb{구동사} idiom{관용구} phrase{구} other{{value}}}'**
   String wordPartOfSpeech(String pos, String value);
 
   /// No description provided for @wordEditTermRequired.
@@ -1433,19 +1433,19 @@ abstract class AppLocalizations {
   /// No description provided for @notificationChannelName.
   ///
   /// In ko, this message translates to:
-  /// **'복습 알림'**
+  /// **'단어 알림'**
   String get notificationChannelName;
 
   /// No description provided for @notificationChannelDescription.
   ///
   /// In ko, this message translates to:
-  /// **'설정한 요일·시간대에 보내는 단어 복습 알림'**
+  /// **'설정한 요일·시간대에 단어와 뜻을 알림으로 보여 줘요'**
   String get notificationChannelDescription;
 
   /// No description provided for @notificationTitleDefault.
   ///
   /// In ko, this message translates to:
-  /// **'복습 시간이에요'**
+  /// **'오늘의 단어'**
   String get notificationTitleDefault;
 
   /// Reminder notification title listing today's words.
@@ -1457,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationBodyDefault.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 외울 단어가 기다리고 있어요. 탭하면 바로 학습!'**
+  /// **'단어를 추가하면 여기에 단어와 뜻을 보여 드려요.'**
   String get notificationBodyDefault;
 
   /// No description provided for @homeError.
@@ -1511,13 +1511,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeQuickGuessWord.
   ///
   /// In ko, this message translates to:
-  /// **'예문 보고 단어 맞추기'**
+  /// **'빈칸 채우기 · 직접 쓰기'**
   String get homeQuickGuessWord;
 
   /// No description provided for @homeQuickFillBlank.
   ///
   /// In ko, this message translates to:
-  /// **'예문 빈칸 채우기'**
+  /// **'빈칸 채우기 · 보기 고르기'**
   String get homeQuickFillBlank;
 
   /// No description provided for @homeQuickBrowseWordbooks.
@@ -1793,14 +1793,8 @@ abstract class AppLocalizations {
   /// No description provided for @homeTodayCards.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 {count}장'**
+  /// **'오늘 복습 {count}장'**
   String homeTodayCards(int count);
-
-  /// No description provided for @homeNewReviewBreakdown.
-  ///
-  /// In ko, this message translates to:
-  /// **'신규 {fresh} · 복습 {review}'**
-  String homeNewReviewBreakdown(int fresh, int review);
 
   /// No description provided for @homeStartButton.
   ///
@@ -2081,7 +2075,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSessionSize.
   ///
   /// In ko, this message translates to:
-  /// **'한 번에 꺼낼 카드'**
+  /// **'한 번에 복습할 카드 수'**
   String get settingsSessionSize;
 
   /// No description provided for @settingsMixLabel.
@@ -2111,7 +2105,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsReminderMaster.
   ///
   /// In ko, this message translates to:
-  /// **'복습 알림'**
+  /// **'단어 알림'**
   String get settingsReminderMaster;
 
   /// No description provided for @settingsAddSlot.
@@ -2197,6 +2191,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'정보 · 출처'**
   String get settingsAbout;
+
+  /// No description provided for @settingsPrivacy.
+  ///
+  /// In ko, this message translates to:
+  /// **'개인정보처리방침'**
+  String get settingsPrivacy;
 
   /// No description provided for @aboutDataSources.
   ///
@@ -2402,12 +2402,6 @@ abstract class AppLocalizations {
   /// **'앨범에서 고르기'**
   String get wordScanGallery;
 
-  /// No description provided for @wordScanPick.
-  ///
-  /// In ko, this message translates to:
-  /// **'가져올 문장 고르기'**
-  String get wordScanPick;
-
   /// No description provided for @wordScanFailed.
   ///
   /// In ko, this message translates to:
@@ -2425,6 +2419,66 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'내 사진'**
   String get exampleSourcePhoto;
+
+  /// No description provided for @wordScanAdded.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진에서 문장 {count}개를 가져왔어요'**
+  String wordScanAdded(int count);
+
+  /// No description provided for @homeNewReviewBreakdown.
+  ///
+  /// In ko, this message translates to:
+  /// **'신규 {fresh} · 복습 {review}'**
+  String homeNewReviewBreakdown(int fresh, int review);
+
+  /// No description provided for @settingsAnswerStyle.
+  ///
+  /// In ko, this message translates to:
+  /// **'문제 방식'**
+  String get settingsAnswerStyle;
+
+  /// No description provided for @settingsAnswerInput.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸에 직접 쓰기'**
+  String get settingsAnswerInput;
+
+  /// No description provided for @settingsAnswerChoice.
+  ///
+  /// In ko, this message translates to:
+  /// **'보기 4개 중 고르기'**
+  String get settingsAnswerChoice;
+
+  /// No description provided for @settingsAnswerHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'홈의 시작 버튼으로 복습할 때 이 방식으로 문제가 나와요.'**
+  String get settingsAnswerHelp;
+
+  /// Meaning of the sample word 'welcome' (interjection) in the user's language.
+  ///
+  /// In ko, this message translates to:
+  /// **'환영합니다, 어서 오세요'**
+  String get sampleWelcomeMeaning;
+
+  /// No description provided for @sampleWelcomeExample1.
+  ///
+  /// In ko, this message translates to:
+  /// **'Vocab with Examples에 오신 것을 환영합니다!'**
+  String get sampleWelcomeExample1;
+
+  /// No description provided for @sampleWelcomeExample2.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 돌아온 것을 환영해요.'**
+  String get sampleWelcomeExample2;
+
+  /// No description provided for @homeAddCardHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'영어 단어를 쓰면 뜻과 예문을 찾아 카드로 만들어요'**
+  String get homeAddCardHint;
 }
 
 class _AppLocalizationsDelegate

@@ -23,7 +23,11 @@ ran to the station.''';
     expect(ReviewMode.choice.examplesOnly, isTrue);
     expect(ReviewMode.meaning.examplesOnly, isFalse);
     expect(ReviewMode.mixed.examplesOnly, isFalse);
-    expect(ReviewMode.input.usesChoices, isFalse);
-    expect(ReviewMode.meaning.usesChoices, isTrue);
+    // 시작·뜻 문제는 설정을 따르고, 기본은 빈칸에 직접 쓰기.
+    expect(ReviewMode.input.usesChoices(answerByChoice: true), isFalse);
+    expect(ReviewMode.choice.usesChoices(), isTrue);
+    expect(ReviewMode.mixed.usesChoices(), isFalse);
+    expect(ReviewMode.mixed.usesChoices(answerByChoice: true), isTrue);
+    expect(ReviewMode.meaning.usesChoices(answerByChoice: true), isTrue);
   });
 }

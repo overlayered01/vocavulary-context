@@ -41,32 +41,45 @@ class HomeScreen extends ConsumerWidget {
         return PanelPage(
           header: ContentWidth(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(26, 18, 18, 22),
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  HeaderEyebrow(
-                    l10n.appTitle.toUpperCase(),
-                    trailing: FilledButton.icon(
-                      key: const ValueKey('home-add-word'),
-                      onPressed: () => openWordAdd(context, ref),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text(l10n.wordAddWord),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.ink,
-                        foregroundColor: AppColors.card,
-                        minimumSize: const Size(0, 40),
-                        padding: const EdgeInsets.fromLTRB(12, 0, 16, 0),
-                        shape: const StadiumBorder(),
-                        textStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    // 앱 안 제목은 언어와 관계없이 영어 이름으로 둔다.
+                    child: Text(
+                      'Vocab with Examples',
+                      key: const ValueKey('home-title'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: kDisplayFont,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                        color: AppColors.ink,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
+                  const SizedBox(height: 16),
+                  _AddCardTile(
+                    key: const ValueKey('home-add-word'),
+                    onTap: () => openWordAdd(context, ref),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          bodyPadding: EdgeInsets.zero,
+          body: ContentWidth(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
+              children: [
+                // 복습 구간 맨 위: 남은 카드와 지금 복습할 카드.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
@@ -78,71 +91,70 @@ class HomeScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.sub2,
+                                color: AppColors.onPanelSub,
                               ),
                             ),
                             Text(
                               '$remaining',
                               key: const ValueKey('home-remaining'),
                               style: TextStyle(
-                                fontSize: 92,
+                                fontFamily: kDisplayFont,
+                                fontSize: 64,
                                 height: 1,
                                 fontWeight: FontWeight.w200,
-                                letterSpacing: -4,
-                                color: AppColors.ink,
+                                letterSpacing: -2,
+                                color: AppColors.onPanel,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8, right: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.point,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                l10n.homeTodayCards(session.length),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.onPoint,
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.point,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    l10n.homeTodayCards(session.length),
+                                    textAlign: TextAlign.end,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.onPoint,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  l10n.homeNewReviewBreakdown(
+                                    fresh.length,
+                                    session.length - fresh.length,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.onPanelSub,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              l10n.homeNewReviewBreakdown(
-                                fresh.length,
-                                session.length - fresh.length,
-                              ),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.sub,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          bodyPadding: EdgeInsets.zero,
-          body: ContentWidth(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 24, 22, 16),
-              children: [
+                ),
                 _DeckPreview(
                   word: next,
                   position: next == null ? 0 : 1,
@@ -152,21 +164,15 @@ class HomeScreen extends ConsumerWidget {
                       : () => _startReview(context, ReviewMode.mixed),
                 ),
                 const SizedBox(height: 14),
-                if (words.isEmpty)
-                  PointButton(
-                    label: l10n.wordAddWord,
-                    leadingIcon: Icons.add_rounded,
-                    onPressed: () => openWordAdd(context, ref),
-                  )
-                else
-                  PointButton(
-                    key: const ValueKey('home-start'),
-                    label: l10n.homeStartButton,
-                    trailingArrow: true,
-                    onPressed: session.isEmpty
-                        ? null
-                        : () => _startReview(context, ReviewMode.mixed),
-                  ),
+                // 단어 추가는 위쪽 큰 버튼으로 한다.
+                PointButton(
+                  key: const ValueKey('home-start'),
+                  label: l10n.homeStartButton,
+                  trailingArrow: true,
+                  onPressed: session.isEmpty
+                      ? null
+                      : () => _startReview(context, ReviewMode.mixed),
+                ),
                 const SizedBox(height: 20),
                 _QuickRow(
                   label: l10n.homeQuickGuessWord,
@@ -196,6 +202,113 @@ class HomeScreen extends ConsumerWidget {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => ReviewScreen(mode: mode)));
+  }
+}
+
+/// 새 카드 만들기 타일. 뒤에 카드 한 장이 겹친 빈 카드 모양으로,
+/// 누르면 단어 추가 화면이 열린다.
+class _AddCardTile extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddCardTile({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final back = Color.lerp(AppColors.chip, AppColors.ink, 0.10)!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // 뒤에 겹친 카드
+          Positioned(
+            left: 14,
+            right: 14,
+            top: -8,
+            height: 30,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: back,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+              ),
+            ),
+          ),
+          Material(
+            color: AppColors.chip,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 18),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'NEW CARD',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.3,
+                              color: AppColors.sub,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            l10n.wordAddWord,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.homeAddCardHint,
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: AppColors.sub,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // 빈칸 자리: 여기에 단어가 들어간다는 느낌.
+                          Container(
+                            width: 120,
+                            height: 2,
+                            color: AppColors.ink,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.point,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: 28,
+                        color: AppColors.onPoint,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

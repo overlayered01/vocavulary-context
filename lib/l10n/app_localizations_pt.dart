@@ -104,6 +104,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'determiner': 'Determinante',
       'phrasalVerb': 'Phrasal verb',
       'idiom': 'Expressão idiomática',
+      'phrase': 'Locução',
       'other': '$value',
     });
     return '$_temp0';
@@ -896,14 +897,14 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get notificationChannelName => 'Lembretes de revisão';
+  String get notificationChannelName => 'Notificações de palavras';
 
   @override
   String get notificationChannelDescription =>
-      'Lembretes para revisar palavras nos dias e horários escolhidos';
+      'Mostra palavras e significados como notificações nos dias e horários escolhidos';
 
   @override
-  String get notificationTitleDefault => 'Hora de revisar';
+  String get notificationTitleDefault => 'Palavra do momento';
 
   @override
   String notificationTitleWords(int count) {
@@ -918,7 +919,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationBodyDefault =>
-      'Suas palavras de hoje estão esperando. Toque para começar!';
+      'Adicione palavras e elas aparecerão aqui com o significado.';
 
   @override
   String homeError(String error) {
@@ -963,10 +964,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeQuickStart => 'Início rápido';
 
   @override
-  String get homeQuickGuessWord => 'Adivinhe a palavra pelos exemplos';
+  String get homeQuickGuessWord => 'Completar · digitar';
 
   @override
-  String get homeQuickFillBlank => 'Complete as lacunas';
+  String get homeQuickFillBlank => 'Completar · escolher';
 
   @override
   String get homeQuickBrowseWordbooks => 'Ver listas';
@@ -1139,12 +1140,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String homeTodayCards(int count) {
-    return '$count hoje';
-  }
-
-  @override
-  String homeNewReviewBreakdown(int fresh, int review) {
-    return 'Novos $fresh · Revisão $review';
+    return '$count para revisar hoje';
   }
 
   @override
@@ -1299,7 +1295,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsReviewSection => 'Revisão';
 
   @override
-  String get settingsSessionSize => 'Cartões por sessão';
+  String get settingsSessionSize => 'Cartões por revisão';
 
   @override
   String get settingsMixLabel => 'Misturar descartados';
@@ -1316,7 +1312,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsNotificationsSection => 'Lembretes';
 
   @override
-  String get settingsReminderMaster => 'Lembretes de revisão';
+  String get settingsReminderMaster => 'Notificações de palavras';
 
   @override
   String get settingsAddSlot => 'Faixa de lembrete';
@@ -1369,6 +1365,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsAbout => 'Sobre · fontes';
+
+  @override
+  String get settingsPrivacy => 'Política de privacidade';
 
   @override
   String get aboutDataSources => 'Fontes de dados';
@@ -1489,9 +1488,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get wordScanGallery => 'Escolher da galeria';
 
   @override
-  String get wordScanPick => 'Escolha as frases';
-
-  @override
   String get wordScanFailed => 'Não foi possível ler o texto da foto';
 
   @override
@@ -1501,4 +1497,40 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get exampleSourcePhoto => 'Minha foto';
+
+  @override
+  String wordScanAdded(int count) {
+    return '$count frases adicionadas da foto';
+  }
+
+  @override
+  String homeNewReviewBreakdown(int fresh, int review) {
+    return 'Novos $fresh · Revisão $review';
+  }
+
+  @override
+  String get settingsAnswerStyle => 'Tipo de resposta';
+
+  @override
+  String get settingsAnswerInput => 'Digitar a palavra';
+
+  @override
+  String get settingsAnswerChoice => 'Escolher entre 4';
+
+  @override
+  String get settingsAnswerHelp =>
+      'Usado ao revisar com Começar na tela inicial.';
+
+  @override
+  String get sampleWelcomeMeaning => 'bem-vindo, bem-vinda';
+
+  @override
+  String get sampleWelcomeExample1 => 'Bem-vindo ao Vocab with Examples!';
+
+  @override
+  String get sampleWelcomeExample2 => 'Bem-vindos de volta, pessoal.';
+
+  @override
+  String get homeAddCardHint =>
+      'Digite uma palavra em inglês e encontramos significados e exemplos para o cartão';
 }

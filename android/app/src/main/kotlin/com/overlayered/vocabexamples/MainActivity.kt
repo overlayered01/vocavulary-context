@@ -1,4 +1,4 @@
-package com.easywith.vocabulary
+package com.overlayered.vocabexamples
 
 import io.flutter.embedding.android.FlutterActivity
 

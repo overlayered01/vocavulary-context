@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart' show Locale;
+import 'package:vocabulary/l10n/l10n.dart';
 import 'package:vocabulary/widgets/panel.dart';
 
 String? focus(String translation, List<String> meanings) {
@@ -26,5 +28,15 @@ void main() {
   test('한 글자 뜻은 어절 첫머리에서만', () {
     expect(focus('눈이 많이 왔다.', ['눈']), '눈이');
     expect(focus('그는 안경을 썼다.', ['경']), isNull);
+  });
+
+  test('구동사·관용구·구는 영어 유형 이름과 번역 이름으로 보인다', () {
+    final ko = lookupAppLocalizations(const Locale('ko'));
+    expect(englishPartOfSpeech('구동사'), 'phrasal verb');
+    expect(englishPartOfSpeech('숙어'), 'idiom');
+    expect(englishPartOfSpeech('구'), 'phrase');
+    expect(ko.partOfSpeech('숙어'), '관용구');
+    expect(ko.partOfSpeech('구'), '구');
+    expect(ko.partOfSpeech('phrase'), '구');
   });
 }
