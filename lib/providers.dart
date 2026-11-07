@@ -311,9 +311,13 @@ final todayStudyLogsProvider = FutureProvider.autoDispose<List<StudyLog>>((
 });
 
 /// 데이터 변경 후 화면 갱신용 헬퍼.
+///
+/// 단어장별 목록(wordsProvider)도 전부 새로 읽는다. 단어장 탭은 화면을
+/// 유지하므로, 복습에서 카드를 버려도 이것을 빼면 예전 장수가 남는다.
 void invalidateData(WidgetRef ref) {
   ref.invalidate(wordbooksProvider);
   ref.invalidate(allWordsProvider);
+  ref.invalidate(wordsProvider);
   ref.invalidate(todayStudyLogsProvider);
 }
 
