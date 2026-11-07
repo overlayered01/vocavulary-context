@@ -13,9 +13,7 @@ import 'package:vocabulary/providers.dart';
 void main() {
   final date = DateTime(2026, 11, 7);
 
-  testWidgets('카드를 버리고 invalidateData를 부르면 단어장별 남은 장수도 갱신된다', (
-    tester,
-  ) async {
+  testWidgets('카드를 버리고 invalidateData를 부르면 단어장별 남은 장수도 갱신된다', (tester) async {
     SharedPreferences.setMockInitialValues({'seeded_v1': true});
     final repo = LocalRepository();
     await repo.init();

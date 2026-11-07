@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../l10n/l10n.dart';
+import '../models/translation_language.dart';
 import '../models/word.dart';
 import '../models/wordbook.dart';
 import '../providers.dart';
@@ -78,16 +79,7 @@ class _GroupChoice {
 }
 
 class _WordAddScreenState extends ConsumerState<WordAddScreen> {
-  static const _manualParts = [
-    '명사',
-    '동사',
-    '형용사',
-    '부사',
-    '구동사',
-    '숙어',
-    '구',
-    '',
-  ];
+  static const _manualParts = ['명사', '동사', '형용사', '부사', '구동사', '숙어', '구', ''];
   static const _maxExamples = 8;
 
   late String _bookId = widget.wordbookId;
@@ -96,6 +88,12 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
   WordLookup? _lookup;
   bool _loading = false;
   int _lookupSerial = 0;
+
+  /// 마지막으로 시작한(진행 중이거나 끝난) 조회의 단어·설정.
+  /// 같은 조건이면 다시 찾지 않아 고른 예문·직접 쓴 예문을 지킨다.
+  String _lookupTerm = '';
+  bool? _lookupAuto;
+  TranslationLanguage? _lookupLanguage;
   final List<_GroupChoice> _groups = [];
   int _selected = 0;
   bool _saving = false;
@@ -125,11 +123,25 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
     _debounce = Timer(const Duration(milliseconds: 600), _runLookup);
   }
 
-  Future<void> _runLookup() async {
+  /// [force]면 같은 단어라도 다시 찾는다(번역 언어가 바뀐 때).
+  Future<void> _runLookup({bool force = false}) async {
     _debounce?.cancel();
     final term = _term.text.trim();
+    final settings = ref.read(settingsProvider);
+    final auto = settings.autoMeanings;
+    final language = settings.translationLanguage;
+    // 같은 단어를 다시 찾으면(엔터, 끝 공백 넣었다 지우기) 고른 예문이 사라진다.
+    if (!force &&
+        term == _lookupTerm &&
+        (term.isEmpty ||
+            (auto == _lookupAuto && language == _lookupLanguage))) {
+      return;
+    }
     final serial = ++_lookupSerial;
-    if (term.isEmpty || !ref.read(settingsProvider).autoMeanings) {
+    _lookupTerm = term;
+    _lookupAuto = auto;
+    _lookupLanguage = language;
+    if (term.isEmpty || !auto) {
       setState(() {
         _lookup = term.isEmpty ? null : WordLookup(term: term);
         _loading = false;
@@ -138,22 +150,31 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
       _loadExamples();
       return;
     }
+    // 조회 전에 있던 직접 쓴 예문은 이전 단어(또는 이전 언어)의 것이다.
+    final before = {for (final g in _groups) ...g.userExamples};
     setState(() => _loading = true);
     final result = await ref.read(wordDraftServiceProvider).lookup(term);
     if (!mounted || serial != _lookupSerial) return;
     setState(() {
       _lookup = result;
       _loading = false;
-      _resetGroups(result.groups);
+      _resetGroups(result.groups, before: before);
     });
     _loadExamples();
   }
 
   /// 사전 결과로 품사 카드를 새로 만든다. 직접 쓴 뜻은 같은 품사 카드에 다시 넣는다.
-  void _resetGroups(List<SenseGroup> groups) {
+  /// 조회하는 동안 직접 쓰거나 사진에서 가져온 예문([before]에 없는 것)도 다시 넣는다.
+  void _resetGroups(List<SenseGroup> groups, {Set<Example> before = const {}}) {
     final manual = [
       for (final g in _groups)
         if (g.manualMeanings.isNotEmpty) (g.partOfSpeech, g.manualMeanings),
+    ];
+    final kept = [
+      for (final g in _groups)
+        for (final e in g.examples)
+          if (g.userExamples.contains(e) && !before.contains(e))
+            (g.partOfSpeech, e),
     ];
     _groups
       ..clear()
@@ -183,6 +204,12 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
           group.checked.add(m);
         }
       }
+    }
+    for (final (part, example) in kept.reversed) {
+      final group =
+          _groups.where((g) => g.partOfSpeech == part).firstOrNull ??
+          _groups.firstOrNull;
+      if (group != null) _insertExamples(group, [example]);
     }
     _selected = _firstFreeGroup();
   }
@@ -598,10 +625,22 @@ class _WordAddScreenState extends ConsumerState<WordAddScreen> {
         ref.watch(wordbooksProvider).asData?.value ?? const <Wordbook>[];
     ref.watch(wordsProvider(_bookId));
     final settings = ref.watch(settingsProvider);
+    // 자동 입력 시트에서 번역 언어를 바꾸면 그 언어의 뜻·예문으로 다시 찾는다.
+    ref.listen(settingsProvider.select((s) => s.translationLanguage), (
+      previous,
+      next,
+    ) {
+      if (previous != next && _term.text.trim().isNotEmpty) {
+        _runLookup(force: true);
+      }
+    });
     final term = _term.text.trim();
     final current = _current;
+    // 바뀐 단어를 찾기 전(입력 대기·조회 중)에는 이전 단어의 발음·예문이 남아 있다.
     final canSave =
         !_saving &&
+        !_loading &&
+        term == _lookupTerm &&
         term.isNotEmpty &&
         current != null &&
         current.checked.isNotEmpty &&

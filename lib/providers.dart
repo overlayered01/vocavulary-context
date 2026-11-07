@@ -321,6 +321,14 @@ void invalidateData(WidgetRef ref) {
   ref.invalidate(todayStudyLogsProvider);
 }
 
+/// [invalidateData]와 같지만, 화면이 이미 닫혀 ref를 쓸 수 없을 때 쓴다.
+void invalidateDataIn(ProviderContainer container) {
+  container.invalidate(wordbooksProvider);
+  container.invalidate(allWordsProvider);
+  container.invalidate(wordsProvider);
+  container.invalidate(todayStudyLogsProvider);
+}
+
 /// 최신 설정과 단어로 복습 알림을 다시 예약한다. 꺼져 있으면 예약을 지운다.
 ///
 /// [ref]는 첫 await 전에만 읽으므로, 호출한 위젯이 곧 사라져도 안전하다.

@@ -38,6 +38,14 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
     invalidateData(ref);
   }
 
+  /// 다른 화면에서 돌아왔을 때. 그 화면에서 카드를 되살렸을 수 있으므로
+  /// 숨김 목록을 비운다. 버린 카드는 이미 저장돼 있어 다시 나오지 않는다.
+  void _refreshAfterReturn() {
+    if (!mounted) return;
+    setState(_hidden.clear);
+    _refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final wordsAsync = ref.watch(wordsProvider(_bookId));
@@ -209,14 +217,14 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
             WordDetailScreen(word: w, wordbookTitle: widget.book.title),
       ),
     );
-    if (mounted) _refresh();
+    _refreshAfterReturn();
   }
 
   Future<void> _openDiscarded() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => DiscardedScreen(book: widget.book)),
     );
-    if (mounted) _refresh();
+    _refreshAfterReturn();
   }
 
   Future<void> _openEditor(Word word) async {
@@ -251,7 +259,7 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
         .upsertWord(
           w.copyWith(favorite: !w.favorite, updatedAt: DateTime.now()),
         );
-    _refresh();
+    if (mounted) _refresh();
   }
 
   Future<void> _discard(Word w) async {
@@ -260,7 +268,9 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
     await ref
         .read(repositoryProvider)
         .upsertWord(Srs.discard(w, DateTime.now()));
+    if (!mounted) return;
     _refresh();
+    rescheduleReminders(ref);
     _showUndo(message, w);
   }
 
@@ -286,12 +296,18 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
     if (ok != true || !mounted) return;
     setState(() => _hidden.add(w.id));
     await ref.read(repositoryProvider).deleteWord(_bookId, w.id);
+    if (!mounted) return;
     _refresh();
-    if (mounted) _showUndo(l10n.wordbookDetailWordDeleted(w.term), w);
+    rescheduleReminders(ref);
+    _showUndo(l10n.wordbookDetailWordDeleted(w.term), w);
   }
 
   void _showUndo(String message, Word original) {
     if (!mounted) return;
+    // 스낵바는 앱 전체에 떠 있어서 이 화면을 닫은 뒤에도 누를 수 있다.
+    // 그때는 ref를 쓸 수 없으므로 저장소와 컨테이너를 미리 잡아 둔다.
+    final repo = ref.read(repositoryProvider);
+    final container = ProviderScope.containerOf(context, listen: false);
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
@@ -301,9 +317,13 @@ class _WordbookDetailScreenState extends ConsumerState<WordbookDetailScreen> {
             label: context.l10n.wordbookDetailUndo,
             textColor: AppColors.point,
             onPressed: () async {
-              await ref.read(repositoryProvider).upsertWord(original);
-              if (mounted) setState(() => _hidden.remove(original.id));
-              _refresh();
+              await repo.upsertWord(original);
+              if (mounted) {
+                setState(() => _hidden.remove(original.id));
+                _refresh();
+              } else {
+                invalidateDataIn(container);
+              }
             },
           ),
         ),

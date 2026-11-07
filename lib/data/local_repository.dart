@@ -153,6 +153,7 @@ class LocalRepository implements VocabRepository {
             phonetic: word.phonetic,
             imageUrl: word.imageUrl,
             examples: word.examples,
+            favorite: word.favorite,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           )

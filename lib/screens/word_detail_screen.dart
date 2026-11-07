@@ -57,22 +57,35 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
         break;
       }
     }
+    // 버린 카드 목록 등 이 화면을 연 곳도 바뀐 내용을 보이게 한다.
+    invalidateData(ref);
   }
 
-  /// 다시 찾은 예문을 카드에 넣는다.
+  bool _addingExample = false;
+
+  /// 다시 찾은 예문을 카드에 넣는다. 저장 중에 다른 예문을 눌러도
+  /// 앞의 것이 덮이지 않도록 한 번에 하나씩 넣는다.
   Future<void> _addFoundExample(Example example) async {
-    final updated = await ref
-        .read(repositoryProvider)
-        .upsertWord(
-          _word.copyWith(
-            examples: [..._word.examples, example],
-            updatedAt: DateTime.now(),
-          ),
-        );
-    if (!mounted) return;
-    setState(() => _word = updated);
-    ref.invalidate(wordsProvider(updated.wordbookId));
-    invalidateData(ref);
+    if (_addingExample) return;
+    _addingExample = true;
+    try {
+      final updated = await ref
+          .read(repositoryProvider)
+          .upsertWord(
+            _word.copyWith(
+              examples: [..._word.examples, example],
+              updatedAt: DateTime.now(),
+            ),
+          );
+      if (!mounted) return;
+      setState(() => _word = updated);
+      ref.invalidate(wordsProvider(updated.wordbookId));
+      invalidateData(ref);
+    } catch (e) {
+      debugPrint('예문 추가 실패: $e');
+    } finally {
+      _addingExample = false;
+    }
   }
 
   Future<void> _toggleFavorite() async {
@@ -378,6 +391,10 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                   children: [
                     DictionaryLookupButton(
                       term: word.term,
+                      // 카드에 저장된 뜻의 언어로 찾는다(설정 언어와 다를 수 있다).
+                      translationLanguage: TranslationLanguage.fromCode(
+                        word.translationLanguage,
+                      ),
                       meanings: () => word.meanings,
                       onSelected: _addDictionaryMeanings,
                     ),
@@ -391,7 +408,7 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
                     ),
                     TextButton.icon(
                       onPressed: () => _open(
-                        'https://translate.google.com/?sl=en&tl=ko&text=${Uri.encodeComponent(word.term)}',
+                        'https://translate.google.com/?sl=en&tl=${_googleTargetCode(word.translationLanguage)}&text=${Uri.encodeComponent(word.term)}',
                       ),
                       icon: const Icon(Icons.open_in_new, size: 15),
                       label: Text(l10n.wordDetailGoogleTranslate),
@@ -406,10 +423,19 @@ class _WordDetailScreenState extends ConsumerState<WordDetailScreen> {
     );
   }
 
+  /// Google 번역의 대상 언어 코드. 중국어는 간체(zh-CN)로 연다.
+  static String _googleTargetCode(String code) {
+    final language = TranslationLanguage.fromCode(code);
+    return language == TranslationLanguage.chinese ? 'zh-CN' : language.code;
+  }
+
+  // canLaunchUrl은 Android 11+에서 패키지 가시성 때문에 false가 나올 수 있어
+  // 바로 열고, 실패는 조용히 넘긴다(다른 링크와 같은 방식).
   Future<void> _open(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('링크 열기 실패: $e');
     }
   }
 }

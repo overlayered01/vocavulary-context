@@ -489,6 +489,8 @@ class _WordbookCard extends ConsumerWidget {
     await ref.read(repositoryProvider).deleteWordbook(book.id);
     ref.invalidate(wordsProvider(book.id));
     invalidateData(ref);
+    // 단어 알림에는 단어와 뜻이 들어가므로, 지운 단어가 알림에 남지 않게 한다.
+    rescheduleReminders(ref);
   }
 }
 

@@ -163,17 +163,22 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     if (_revealed) return;
     setState(() => _busy = true);
     final repo = ref.read(repositoryProvider);
+    // 저장 중에 화면을 닫아도 갱신할 수 있도록 컨테이너를 미리 잡아 둔다.
+    final container = ProviderScope.containerOf(context, listen: false);
     final now = DateTime.now();
     final graded = ok
         ? Srs.applyCorrect(_current, now)
         : Srs.applyWrong(_current, now);
     // 버릴지는 사용자가 정하므로, 마지막 단계에 닿아도 여기서는 덱에 남긴다.
     final kept = Srs.keep(graded);
-    await repo.upsertWord(kept);
+    // 버린 카드가 섞여 나온 경우에는 '남기기'를 고를 때까지 버린 상태로 둔다.
+    // 그러지 않으면 고르지 않고 나가기만 해도 덱으로 돌아온다.
+    final wasDiscarded = _current.status == LearnStatus.completed;
+    await repo.upsertWord(wasDiscarded ? Srs.discard(graded, now) : kept);
     await repo.addStudyLog(
       StudyLog(id: '', wordId: _current.id, correct: ok, studiedAt: now),
     );
-    invalidateData(ref);
+    invalidateDataIn(container);
     if (!mounted) return;
     setState(() {
       _graded = kept;
@@ -187,11 +192,15 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     if (graded == null || _busy) return;
     setState(() => _busy = true);
     final wasInDeck = _current.status != LearnStatus.completed;
-    if (discard) {
-      await ref
-          .read(repositoryProvider)
-          .upsertWord(Srs.discard(graded, DateTime.now()));
-      invalidateData(ref);
+    final repo = ref.read(repositoryProvider);
+    final container = ProviderScope.containerOf(context, listen: false);
+    if (discard && wasInDeck) {
+      await repo.upsertWord(Srs.discard(graded, DateTime.now()));
+      invalidateDataIn(container);
+    } else if (!discard && !wasInDeck) {
+      // 버린 카드를 남기기로 했을 때만 덱에 다시 넣는다.
+      await repo.upsertWord(graded);
+      invalidateDataIn(container);
     }
     if (!mounted) return;
     setState(() {

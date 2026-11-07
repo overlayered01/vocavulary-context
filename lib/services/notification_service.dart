@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -73,6 +74,7 @@ class NotificationService {
     if (kIsWeb) return;
     await init();
     await cancelReminder();
+    await _syncLocalTimezone();
 
     var id = _reminderBaseId;
     try {
@@ -121,6 +123,18 @@ class NotificationService {
     await init();
     for (var i = 0; i < _scheduledReminderCount; i++) {
       await _plugin.cancel(id: _reminderBaseId + i);
+    }
+  }
+
+  /// tz.local을 기기 시간대로 맞춘다. timezone 패키지는 기본값이 UTC라서
+  /// 이것이 없으면 '오전 9시' 알림이 UTC 9시(한국 오후 6시)에 울린다.
+  /// 여행 등으로 시간대가 바뀔 수 있어 예약할 때마다 다시 읽는다.
+  Future<void> _syncLocalTimezone() async {
+    try {
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
+    } catch (e) {
+      debugPrint('기기 시간대 확인 실패: $e');
     }
   }
 

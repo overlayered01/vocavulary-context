@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:vocabulary/services/offline_examples.dart';
 import 'package:vocabulary/models/translation_language.dart';
 import 'package:vocabulary/services/word_draft_service.dart';
 import 'package:vocabulary/theme.dart';
+import 'package:vocabulary/widgets/panel.dart';
 
 http.Response dictionaryResponse() => http.Response(
   jsonEncode({
@@ -432,6 +434,179 @@ void main() {
     final saved = await repo.getWords(book.id);
     expect(saved.single.meanings, ['없는 말']);
     expect(saved.single.partOfSpeech, '');
+  });
+
+  Finder addList() => find
+      .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+      .first;
+
+  Future<void> writeExample(WidgetTester tester, String sentence) async {
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('word-add-write-example')),
+      200,
+      scrollable: addList(),
+    );
+    await tester.tap(find.byKey(const ValueKey('word-add-write-example')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('example-sentence')),
+      sentence,
+    );
+    await tester.tap(find.byKey(const ValueKey('example-add')));
+    await tester.pumpAndSettle();
+  }
+
+  VoidCallback? saveButton(WidgetTester tester) => tester
+      .widget<PointButton>(find.byKey(const ValueKey('word-add-save')))
+      .onPressed;
+
+  testWidgets('같은 단어로 다시 검색해도 고른 예문·직접 쓴 예문을 지킨다', (tester) async {
+    var requests = 0;
+    dictionary.dispose();
+    dictionary = DictionaryService(
+      client: MockClient((_) async {
+        requests++;
+        return dictionaryResponse();
+      }),
+    );
+    await pumpScreen(tester, WordAddScreen(wordbookId: book.id));
+    final field = find.byKey(const ValueKey('word-add-term'));
+    await tester.enterText(field, 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(requests, 1);
+    await writeExample(tester, 'I run home.');
+
+    // 키보드 검색(엔터)과 끝 공백 넣었다 지우기는 다시 찾지 않는다.
+    await tester.showKeyboard(field);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    await tester.enterText(field, 'run ');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.enterText(field, 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(requests, 1);
+    expect(find.text('I run home.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('word-add-save')));
+    await tester.pumpAndSettle();
+    final saved = (await repo.getWords(book.id)).single;
+    expect(saved.examples.first.sentence, 'I run home.');
+  });
+
+  testWidgets('조회 중에 직접 쓴 뜻·예문은 조회가 끝나도 남는다', (tester) async {
+    final response = Completer<http.Response>();
+    dictionary.dispose();
+    dictionary = DictionaryService(client: MockClient((_) => response.future));
+    await pumpScreen(tester, WordAddScreen(wordbookId: book.id));
+    await tester.enterText(find.byKey(const ValueKey('word-add-term')), 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    // 아직 조회 중이라 저장할 수 없다.
+    expect(saveButton(tester), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('word-add-manual')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const ValueKey('manual-meaning')), '뛰다');
+    await tester.tap(find.byKey(const ValueKey('manual-pos-동사')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('manual-add')));
+    await tester.pump();
+    // 조회 중이라 pumpAndSettle은 쓰지 않는다(사전 응답 제한 시간이 지나 버린다).
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('word-add-write-example')),
+      200,
+      scrollable: addList(),
+    );
+    await tester.tap(find.byKey(const ValueKey('word-add-write-example')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('example-sentence')),
+      'I run to school.',
+    );
+    await tester.tap(find.byKey(const ValueKey('example-add')));
+    await tester.pump();
+    expect(find.text('I run to school.'), findsOneWidget);
+    expect(saveButton(tester), isNull);
+
+    response.complete(dictionaryResponse());
+    await tester.pumpAndSettle();
+    expect(find.text('뛰다'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('I run to school.'),
+      200,
+      scrollable: addList(),
+    );
+    expect(find.text('I run to school.'), findsOneWidget);
+    expect(saveButton(tester), isNotNull);
+  });
+
+  testWidgets('번역 언어를 바꾸면 그 언어로 다시 찾는다', (tester) async {
+    var requests = 0;
+    dictionary.dispose();
+    dictionary = DictionaryService(
+      client: MockClient((_) async {
+        requests++;
+        return dictionaryResponse();
+      }),
+    );
+    await pumpScreen(tester, WordAddScreen(wordbookId: book.id));
+    await tester.enterText(find.byKey(const ValueKey('word-add-term')), 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(find.text('달리다'), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(WordAddScreen)),
+    );
+    await container
+        .read(settingsProvider.notifier)
+        .setTranslationLanguage(TranslationLanguage.english);
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(find.text('달리다'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('word-add-save')));
+    await tester.pumpAndSettle();
+    final saved = (await repo.getWords(book.id)).single;
+    expect(saved.meanings, isNot(contains('달리다')));
+  });
+
+  testWidgets('단어를 바꾸고 다시 찾기 전에는 저장할 수 없다', (tester) async {
+    await pumpScreen(tester, WordAddScreen(wordbookId: book.id));
+    final field = find.byKey(const ValueKey('word-add-term'));
+    await tester.enterText(field, 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(saveButton(tester), isNotNull);
+
+    await tester.enterText(field, 'walk');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(saveButton(tester), isNull);
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(saveButton(tester), isNotNull);
+  });
+
+  testWidgets('사전 연결이 안 돼도 뜻을 직접 써서 저장한다', (tester) async {
+    dictionary.dispose();
+    dictionary = DictionaryService(
+      client: MockClient((_) async => throw Exception('offline')),
+    );
+    await pumpScreen(tester, WordAddScreen(wordbookId: book.id));
+    await tester.enterText(find.byKey(const ValueKey('word-add-term')), 'run');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(saveButton(tester), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('word-add-manual')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('manual-meaning')), '뛰다');
+    await tester.tap(find.byKey(const ValueKey('manual-add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('word-add-save')));
+    await tester.pumpAndSettle();
+    expect((await repo.getWords(book.id)).single.meanings, ['뛰다']);
   });
 
   testWidgets('오른쪽으로 밀어 버린 카드는 버린 카드에서 다시 넣는다', (tester) async {
