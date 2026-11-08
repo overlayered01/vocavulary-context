@@ -19,6 +19,9 @@ class AppPalette {
   final Color sub;
   final Color sub2;
   final Color chip;
+
+  /// 화면 위쪽 머리 영역 바탕. 흰 카드와 구분되도록 바탕색을 옅게 깐다.
+  final Color header;
   final Color line;
   final Color tab;
   final Color onPoint;
@@ -34,6 +37,7 @@ class AppPalette {
     required this.sub,
     required this.sub2,
     required this.chip,
+    required this.header,
     required this.line,
     required this.tab,
     required this.onPoint,
@@ -63,6 +67,7 @@ class AppPalette {
       sub: tone(s * 0.45, 0.58),
       sub2: tone(s * 0.45, 0.46),
       chip: tone(s * 0.5, 0.94),
+      header: tone(s * 0.55, 0.925),
       line: tone(s * 0.4, 0.89),
       tab: tone(s * 0.6 + 0.08, 0.7),
       onPoint: point.computeLuminance() > 0.4 ? ink : Colors.white,
@@ -144,6 +149,7 @@ class AppColors {
   static Color get line => _p.line;
   static const card = Color(0xFFFFFFFF);
   static Color get chip => _p.chip;
+  static Color get header => _p.header;
   static Color get ok => _p.ink;
   static const warn = Color(0xFF8A6D24);
 }

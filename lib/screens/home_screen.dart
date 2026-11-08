@@ -214,7 +214,8 @@ class _AddCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final back = Color.lerp(AppColors.chip, AppColors.ink, 0.10)!;
+    // 옅은 머리 영역 위에서 눈에 띄도록 카드는 흰색, 뒤 카드는 머리색보다 조금 짙게.
+    final back = Color.lerp(AppColors.header, AppColors.ink, 0.10)!;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Stack(
@@ -236,7 +237,7 @@ class _AddCardTile extends StatelessWidget {
             ),
           ),
           Material(
-            color: AppColors.chip,
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(22),
             child: InkWell(
               borderRadius: BorderRadius.circular(22),

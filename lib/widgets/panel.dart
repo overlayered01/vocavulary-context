@@ -4,7 +4,9 @@ import '../l10n/l10n.dart';
 import '../models/word.dart';
 import '../theme.dart';
 
-/// 흰 머리 영역 아래에 위가 둥근 짙은 패널이 깔리는 기본 화면 틀.
+/// 옅은 바탕색 머리 영역 아래에 위가 둥근 짙은 패널이 깔리는 기본 화면 틀.
+/// 머리 영역을 흰색으로 두면 패널 속 흰 카드가 스크롤로 올라올 때
+/// 머리 영역과 이어져 보이므로 바탕색을 옅게 깐다.
 class PanelPage extends StatelessWidget {
   final Widget header;
   final Widget body;
@@ -24,7 +26,7 @@ class PanelPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.card,
+      color: AppColors.header,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
