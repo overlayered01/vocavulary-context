@@ -1,6 +1,6 @@
 {
-    "name": "Vocab with Examples",
-    "short_name": "Vocab with Examples",
+    "name": "WordPing",
+    "short_name": "WordPing",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",

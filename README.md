@@ -1,4 +1,4 @@
-# 예문 단어장 · Vocab with Examples (vocabulary)
+# 톡톡 단어장 · WordPing (vocabulary)
 
 예문으로 배우고, 알람으로 복습하고, 발음을 들으며, 클라우드로 공유하는 단어장 앱.
 
@@ -50,7 +50,7 @@ flutter test           # SRS·복습 로직 단위 테스트
 flutter build apk --debug
 ```
 
-## 예문 단어장 테스트
+## 톡톡 단어장 테스트
 
 현재 Windows PC의 Flutter 경로는 `$env:USERPROFILE\.local\share\flutter\bin\flutter.bat`입니다.
 프로젝트 폴더에서 다음 명령으로 웹 테스트 화면을 실행할 수 있습니다.
@@ -65,7 +65,7 @@ Android 패키지명은 `com.overlayered.vocabexamples`입니다. 이전 패키�
 다른 PC에서 만든 APK와 서명이 다르면 업데이트 설치가 거절될 수 있습니다. 기존 앱을 삭제하기 전 설정에서 데이터를 내보내세요.
 
 테스트할 항목:
-- 홈·로그인·설정 및 설치된 앱의 이름이 **예문 단어장**(영어: **Vocab with Examples**)인지 확인
+- 홈·로그인·설정 및 설치된 앱의 이름이 **톡톡 단어장**(영어: **WordPing**)인지 확인
 - 단어장 생성 → 단어 입력 → 사전 자동 작성 → 수정·저장 → 다시 실행 후 데이터 확인
 - 직접 입력·객관식 복습과 단어·예문 발음 듣기
 - Android 기기에서 알림 권한·예약 알림·홈 테스트 광고 확인

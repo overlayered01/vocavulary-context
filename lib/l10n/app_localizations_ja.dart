@@ -9,7 +9,7 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get appTitle => 'Vocab with Examples';
+  String get appTitle => 'WordPing';
 
   @override
   String get commonCancel => 'キャンセル';
@@ -1443,7 +1443,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sampleWelcomeMeaning => 'ようこそ、いらっしゃい';
 
   @override
-  String get sampleWelcomeExample1 => 'Vocab with Examplesへようこそ！';
+  String get sampleWelcomeExample1 => 'WordPingへようこそ！';
 
   @override
   String get sampleWelcomeExample2 => 'みんな、おかえりなさい。';

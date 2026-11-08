@@ -1,6 +1,6 @@
 {
   "@@locale": "ko",
-  "appTitle": "예문 단어장",
+  "appTitle": "톡톡 단어장",
   "commonCancel": "취소",
   "commonSave": "저장",
   "commonDelete": "삭제",
@@ -1001,7 +1001,7 @@
   "@sampleWelcomeMeaning": {
     "description": "Meaning of the sample word 'welcome' (interjection) in the user's language."
   },
-  "sampleWelcomeExample1": "Vocab with Examples에 오신 것을 환영합니다!",
+  "sampleWelcomeExample1": "톡톡 단어장에 오신 것을 환영합니다!",
   "sampleWelcomeExample2": "모두 돌아온 것을 환영해요.",
   "homeAddCardHint": "영어 단어를 쓰면 뜻과 예문을 찾아 카드로 만들어요"
 }

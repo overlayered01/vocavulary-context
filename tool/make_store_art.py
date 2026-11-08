@@ -58,7 +58,7 @@ def make(lang, headline, sub, font_bold, font_reg, out):
     bg.convert("RGB").save(out)
 
 F = f"{root}/assets/fonts"
-make("en", ["Learn words in", "real sentences"], "Vocab with Examples",
+make("en", ["Word alerts with", "real examples"], "WordPing",
      f"{F}/Outfit-SemiBold.ttf", f"{F}/Outfit-Regular.ttf", f"{root}/store/feature-graphic-en.png")
-make("ko", ["단어는", "예문으로 외우세요"], "예문 단어장",
+make("ko", ["단어 알림 톡톡,", "예문으로 쏙쏙"], "톡톡 단어장",
      "C:/Windows/Fonts/malgunbd.ttf", "C:/Windows/Fonts/malgun.ttf", f"{root}/store/feature-graphic-ko.png")

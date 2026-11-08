@@ -1,6 +1,6 @@
 {
   "@@locale": "es",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "Cancelar",
   "commonSave": "Guardar",
   "commonDelete": "Eliminar",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "Elegir entre 4 opciones",
   "settingsAnswerHelp": "Se usa al repasar con Empezar en la pantalla de inicio.",
   "sampleWelcomeMeaning": "bienvenido, bienvenida",
-  "sampleWelcomeExample1": "¡Bienvenido a Vocab with Examples!",
+  "sampleWelcomeExample1": "¡Bienvenido a WordPing!",
   "sampleWelcomeExample2": "Bienvenidos de nuevo a todos.",
   "homeAddCardHint": "Escribe una palabra en inglés y buscaremos significados y ejemplos para la tarjeta"
 }

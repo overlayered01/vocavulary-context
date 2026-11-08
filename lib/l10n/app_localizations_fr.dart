@@ -9,7 +9,7 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get appTitle => 'Vocab with Examples';
+  String get appTitle => 'WordPing';
 
   @override
   String get commonCancel => 'Annuler';
@@ -1526,7 +1526,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sampleWelcomeMeaning => 'bienvenue';
 
   @override
-  String get sampleWelcomeExample1 => 'Bienvenue dans Vocab with Examples !';
+  String get sampleWelcomeExample1 => 'Bienvenue dans WordPing !';
 
   @override
   String get sampleWelcomeExample2 => 'Bon retour à tous.';

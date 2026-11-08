@@ -1,6 +1,6 @@
 {
   "@@locale": "ja",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "キャンセル",
   "commonSave": "保存",
   "commonDelete": "削除",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "4択から選ぶ",
   "settingsAnswerHelp": "ホームの「スタート」で復習するときの出題方式です。",
   "sampleWelcomeMeaning": "ようこそ、いらっしゃい",
-  "sampleWelcomeExample1": "Vocab with Examplesへようこそ！",
+  "sampleWelcomeExample1": "WordPingへようこそ！",
   "sampleWelcomeExample2": "みんな、おかえりなさい。",
   "homeAddCardHint": "英単語を入力すると、意味と例文を探してカードにします"
 }

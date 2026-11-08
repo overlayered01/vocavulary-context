@@ -1,4 +1,4 @@
-CFBundleDisplayName = "예문 단어장";
-CFBundleName = "예문 단어장";
+CFBundleDisplayName = "톡톡 단어장";
+CFBundleName = "톡톡 단어장";
 NSCameraUsageDescription = "책이나 프린트를 찍어 단어의 예문을 가져옵니다.";
 NSPhotoLibraryUsageDescription = "사진 속 문장에서 단어의 예문을 가져옵니다.";

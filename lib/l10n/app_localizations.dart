@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In ko, this message translates to:
-  /// **'예문 단어장'**
+  /// **'톡톡 단어장'**
   String get appTitle;
 
   /// No description provided for @commonCancel.
@@ -2465,7 +2465,7 @@ abstract class AppLocalizations {
   /// No description provided for @sampleWelcomeExample1.
   ///
   /// In ko, this message translates to:
-  /// **'Vocab with Examples에 오신 것을 환영합니다!'**
+  /// **'톡톡 단어장에 오신 것을 환영합니다!'**
   String get sampleWelcomeExample1;
 
   /// No description provided for @sampleWelcomeExample2.

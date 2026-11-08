@@ -1,6 +1,6 @@
 {
   "@@locale": "fr",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "Annuler",
   "commonSave": "Enregistrer",
   "commonDelete": "Supprimer",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "Choisir parmi 4",
   "settingsAnswerHelp": "Utilisé quand vous révisez avec Commencer sur l'accueil.",
   "sampleWelcomeMeaning": "bienvenue",
-  "sampleWelcomeExample1": "Bienvenue dans Vocab with Examples !",
+  "sampleWelcomeExample1": "Bienvenue dans WordPing !",
   "sampleWelcomeExample2": "Bon retour à tous.",
   "homeAddCardHint": "Tapez un mot anglais : on trouve sens et exemples pour en faire une carte"
 }

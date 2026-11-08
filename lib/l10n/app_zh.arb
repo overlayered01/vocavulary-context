@@ -1,6 +1,6 @@
 {
   "@@locale": "zh",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "取消",
   "commonSave": "保存",
   "commonDelete": "删除",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "四选一",
   "settingsAnswerHelp": "在首页点“开始”复习时使用此方式。",
   "sampleWelcomeMeaning": "欢迎",
-  "sampleWelcomeExample1": "欢迎来到 Vocab with Examples！",
+  "sampleWelcomeExample1": "欢迎来到 WordPing！",
   "sampleWelcomeExample2": "欢迎大家回来。",
   "homeAddCardHint": "输入英语单词，自动查找释义和例句做成卡片"
 }

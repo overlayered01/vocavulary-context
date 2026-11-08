@@ -1,6 +1,6 @@
 {
   "@@locale": "th",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "ยกเลิก",
   "commonSave": "บันทึก",
   "commonDelete": "ลบ",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "เลือกจาก 4 ตัวเลือก",
   "settingsAnswerHelp": "ใช้เมื่อทบทวนด้วยปุ่มเริ่มที่หน้าหลัก",
   "sampleWelcomeMeaning": "ยินดีต้อนรับ",
-  "sampleWelcomeExample1": "ยินดีต้อนรับสู่ Vocab with Examples!",
+  "sampleWelcomeExample1": "ยินดีต้อนรับสู่ WordPing!",
   "sampleWelcomeExample2": "ยินดีต้อนรับกลับมาทุกคน",
   "homeAddCardHint": "พิมพ์คำภาษาอังกฤษ แล้วเราจะหาความหมายและตัวอย่างมาทำเป็นการ์ด"
 }

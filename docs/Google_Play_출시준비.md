@@ -1,4 +1,4 @@
-# Vocab with Examples — Google Play 해외 출시 준비
+# WordPing — Google Play 해외 출시 준비
 
 확인일: 2026-09-22
 
@@ -9,7 +9,7 @@
 
 | 항목 | 준비 내용 |
 | --- | --- |
-| 앱 이름 | Vocab with Examples (한국어: 예문 단어장) |
+| 앱 이름 | WordPing (한국어: 톡톡 단어장) |
 | 기본 스토어 언어 | 영어(미국), en-US 제안 |
 | 앱/게임 | 앱 |
 | 카테고리 | 교육 제안 |
@@ -63,7 +63,7 @@
 
 | 항목 | 확인 결과 | 필요한 작업 |
 | --- | --- | --- |
-| 앱 표시 이름 | Android·iOS·웹·화면에 예문 단어장(한국어)·Vocab with Examples(그 외) 적용 | 새 빌드에 반영 |
+| 앱 표시 이름 | Android·iOS·웹·화면에 톡톡 단어장(한국어)·WordPing(그 외) 적용 | 새 빌드에 반영 |
 | 화면 다국어 지원 | 한국어 문자열이 화면에 직접 작성되어 있고 MaterialApp에 지원 언어 설정 없음 | 문자열 리소스 분리, 영어 기본값, 언어 선택 및 저장 |
 | 단어 뜻 | 설정에서 10개 번역 언어 선택, 선택 언어의 사전 뜻 조회와 영어 풀이 대체 구현 | 배포 대상 언어별 번역 제공 범위·실기기 확인 |
 | 예문 번역 | 선택 언어로 Tatoeba 조회, 언어별 캐시 분리, 번역 없는 해석은 빈 값 유지 | 배포 대상 언어별 예문 제공 범위·실기기 확인 |
@@ -83,7 +83,7 @@
 
 영어 앱 화면을 제공하는 출시를 위한 초안이다. 번역이 실제 구현되기 전에는 영어 UI를 지원한다고 안내하지 않는다. 클라우드·공유·다국어 자동 번역은 출시 검증 전이므로 아래 홍보 문구에 포함하지 않았다.
 
-앱 이름: Vocab with Examples
+앱 이름: WordPing
 
 간단한 설명:
 
@@ -93,7 +93,7 @@
 
 > Build your English vocabulary with sentences that give words context.
 >
-> Vocab with Examples helps you collect words, add meanings and examples, and return to them for regular practice.
+> WordPing helps you collect words, add meanings and examples, and return to them for regular practice.
 >
 > • Organize vocabulary into your own wordbooks.
 > • Look up English definitions, pronunciation information, and example sentences when available.

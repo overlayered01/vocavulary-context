@@ -49,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(left: 4),
                     // 앱 안 제목은 언어와 관계없이 영어 이름으로 둔다.
                     child: Text(
-                      'Vocab with Examples',
+                      'WordPing',
                       key: const ValueKey('home-title'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

@@ -32,7 +32,7 @@ import '../models/wordbook.dart';
       phonetic: '/ˈwelkəm/',
       examples: [
         Example(
-          sentence: 'Welcome to Vocab with Examples!',
+          sentence: 'Welcome to WordPing!',
           translation: l10n.sampleWelcomeExample1,
         ),
         Example(

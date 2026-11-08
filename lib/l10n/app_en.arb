@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "Pick from 4 choices",
   "settingsAnswerHelp": "Used when you review with Start on the home screen.",
   "sampleWelcomeMeaning": "used to greet someone who has arrived",
-  "sampleWelcomeExample1": "We're glad you're here in Vocab with Examples!",
+  "sampleWelcomeExample1": "We're glad you're here in WordPing!",
   "sampleWelcomeExample2": "Good to have everyone back.",
   "homeAddCardHint": "Type an English word and we'll find meanings and examples for a new card"
 }

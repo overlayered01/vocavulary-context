@@ -1,6 +1,6 @@
 {
   "@@locale": "vi",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "Hủy",
   "commonSave": "Lưu",
   "commonDelete": "Xóa",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "Chọn 1 trong 4",
   "settingsAnswerHelp": "Dùng khi ôn bằng nút Bắt đầu ở màn hình chính.",
   "sampleWelcomeMeaning": "chào mừng",
-  "sampleWelcomeExample1": "Chào mừng bạn đến với Vocab with Examples!",
+  "sampleWelcomeExample1": "Chào mừng bạn đến với WordPing!",
   "sampleWelcomeExample2": "Chào mừng mọi người trở lại.",
   "homeAddCardHint": "Nhập từ tiếng Anh để tìm nghĩa và ví dụ, tạo thành thẻ"
 }

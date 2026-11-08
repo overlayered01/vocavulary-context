@@ -1,6 +1,6 @@
 {
   "@@locale": "id",
-  "appTitle": "Vocab with Examples",
+  "appTitle": "WordPing",
   "commonCancel": "Batal",
   "commonSave": "Simpan",
   "commonDelete": "Hapus",
@@ -391,7 +391,7 @@
   "settingsAnswerChoice": "Pilih dari 4 pilihan",
   "settingsAnswerHelp": "Dipakai saat mengulang dengan Mulai di beranda.",
   "sampleWelcomeMeaning": "selamat datang",
-  "sampleWelcomeExample1": "Selamat datang di Vocab with Examples!",
+  "sampleWelcomeExample1": "Selamat datang di WordPing!",
   "sampleWelcomeExample2": "Selamat datang kembali, semuanya.",
   "homeAddCardHint": "Ketik kata bahasa Inggris, arti dan contohnya dicarikan untuk kartu baru"
 }

@@ -9,7 +9,7 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
-  String get appTitle => '예문 단어장';
+  String get appTitle => '톡톡 단어장';
 
   @override
   String get commonCancel => '취소';
@@ -1421,7 +1421,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sampleWelcomeMeaning => '환영합니다, 어서 오세요';
 
   @override
-  String get sampleWelcomeExample1 => 'Vocab with Examples에 오신 것을 환영합니다!';
+  String get sampleWelcomeExample1 => '톡톡 단어장에 오신 것을 환영합니다!';
 
   @override
   String get sampleWelcomeExample2 => '모두 돌아온 것을 환영해요.';
